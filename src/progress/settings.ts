@@ -1,0 +1,51 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { makeInstrument, type InstrumentKind } from '../theory/instrument'
+import { pcName, SOLFEGE, type PitchClass } from '../theory/notes'
+
+export type NoteNaming = 'letters' | 'solfege'
+
+interface Settings {
+  instrument: InstrumentKind
+  tuningId: string
+  leftHanded: boolean
+  naming: NoteNaming
+  inputDeviceId: string | null
+  sensitivity: number
+  latencyMs: number // compensação de atraso da entrada (toque/instrumento)
+  onboarded: boolean
+  set: (patch: Partial<Omit<Settings, 'set'>>) => void
+}
+
+export const useSettings = create<Settings>()(
+  persist(
+    (set) => ({
+      instrument: 'bass4',
+      tuningId: 'std',
+      leftHanded: false,
+      naming: 'letters',
+      inputDeviceId: null,
+      sensitivity: 0.01,
+      latencyMs: 0,
+      onboarded: false,
+      set: (patch) => set(patch),
+    }),
+    { name: 'fretlab-settings' },
+  ),
+)
+
+export function useInstrument() {
+  const kind = useSettings((s) => s.instrument)
+  const tuningId = useSettings((s) => s.tuningId)
+  return makeInstrument(kind, tuningId)
+}
+
+/** Nome da nota conforme a preferência (C ou Dó). */
+export function useNoteName() {
+  const naming = useSettings((s) => s.naming)
+  return (pc: PitchClass, flats = false) => {
+    const n = pcName(pc, flats)
+    if (naming === 'letters') return n
+    return SOLFEGE[n[0]] + n.slice(1).replace('#', '♯').replace('b', '♭')
+  }
+}
