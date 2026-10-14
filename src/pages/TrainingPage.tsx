@@ -15,7 +15,7 @@ import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
 import { mod12, prefersFlats } from '../theory/notes'
-import { DRILLS, drillOfDay, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
+import { DRILLS, drillOfDay, drillsFor, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
 
 /** Rodadas de cada lição na revisão mista (curta, como um "flashcard" da lição). */
 const REVIEW_ROUNDS = 3
@@ -80,10 +80,11 @@ export function TrainingPage() {
 
 function DrillPanel() {
   const inst = useInstrument()
+  const instKind = inst.kind
   const noteName = useNoteName()
   const leftHanded = useSettings((s) => s.leftHanded)
   // sugestão do dia (fixada ao abrir a página); tom e posição podem ser trocados
-  const [{ today, keyToday }] = useState(() => ({ today: drillOfDay(), keyToday: keyOfDay() }))
+  const [{ today, keyToday }] = useState(() => ({ today: drillOfDay(new Date(), instKind), keyToday: keyOfDay() }))
   const [drillId, setDrillId] = useState(today.id)
   const drill = DRILLS.find((d) => d.id === drillId)!
   const [root, setRoot] = useState(keyToday)
@@ -215,7 +216,7 @@ function DrillPanel() {
           <p className="mt-1 font-display text-4xl font-black uppercase leading-none">{drill.title}</p>
           <p className="mt-1 text-pearl-dim">{drill.focus}</p>
         </div>
-        <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={DRILLS.map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
+        <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={drillsFor(instKind).map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
 
         {drill.usesKey && (
           <div>

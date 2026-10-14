@@ -1,25 +1,40 @@
 import { describe, expect, it } from 'vitest'
 import { makeInstrument, midiAt } from '../theory/instrument'
 import { SCALES, mod12 } from '../theory/notes'
-import { DRILLS, dayNumber, drillOfDay, drillSequence, dueReviews } from './drills'
+import { DRILLS, dayNumber, drillOfDay, drillSequence, drillsFor, dueReviews } from './drills'
 
 const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
 
 describe('Treino do Dia', () => {
   it('todo exercício gera uma sequência tocável em todo instrumento, tom e posição', () => {
     for (const inst of instruments)
-      for (const drill of DRILLS)
+      for (const drill of drillsFor(inst.kind))
         for (let pos = 0; pos < drill.positions; pos++)
         for (let root = 0; root < 12; root++) {
           const seq = drillSequence(inst, drill, root, pos)
           // arpejos nas cordas agudas do baixo de 4 cordas têm menos notas (só sobram 2–3 cordas)
-          expect(seq.length, `${drill.id} ${inst.kind} ${root} ${pos}`).toBeGreaterThanOrEqual(drill.id === 'arpejos' ? 5 : 8)
+          expect(seq.length, `${drill.id} ${inst.kind} ${root} ${pos}`).toBeGreaterThanOrEqual(drill.id === 'arpejos' || drill.id === 'sweep' ? 5 : 8)
           for (const p of seq) {
             expect(p.string).toBeLessThan(inst.openMidi.length)
             expect(p.fret).toBeGreaterThanOrEqual(0)
             expect(p.fret).toBeLessThanOrEqual(inst.frets)
           }
         }
+  })
+
+  it('técnica: cada instrumento vê só os seus exercícios', () => {
+    expect(drillsFor('bass4').map((d) => d.id)).toContain('slap')
+    expect(drillsFor('bass4').map((d) => d.id)).not.toContain('sweep')
+    expect(drillsFor('guitar6').map((d) => d.id)).toContain('legato')
+    expect(drillsFor('guitar6').map((d) => d.id)).not.toContain('walking')
+  })
+
+  it('walking: quatro notas por acorde, começando na fundamental', () => {
+    for (const inst of instruments.filter((i) => i.kind !== 'guitar6')) {
+      const seq = drillSequence(inst, DRILLS.find((d) => d.id === 'walking')!, 7, 0).map((p) => mod12(midiAt(inst, p)))
+      expect(seq.length).toBe(16)
+      expect([seq[0], seq[4], seq[8], seq[12]]).toEqual([7, 0, 2, 7])
+    }
   })
 
   it('escalas sobem e depois descem', () => {

@@ -1,4 +1,4 @@
-import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
+import { midiAt, type FretPos, type Instrument, type InstrumentKind } from '../theory/instrument'
 import { SCALES, mod12 } from '../theory/notes'
 
 /*
@@ -27,6 +27,8 @@ export interface Drill {
   lesson?: string
   /** dicas do professor (botão Dica), da mais geral à mais específica */
   tips: string[]
+  /** exercício de técnica de um instrumento só */
+  instrument?: 'bass' | 'guitar'
 }
 
 const ARPEGGIO_SHAPES = [
@@ -106,13 +108,83 @@ export const DRILLS: Drill[] = [
     lesson: 'w3-oitava',
     tips: ['A mão que toca precisa “pular” a corda do meio: mire a corda de cima com calma no começo, mesmo se o andamento ficar lento.', 'Abafe a corda do meio com a parte de baixo do dedo que pressiona a nota grave; no baixo, também dá para usar o polegar ou a palma da mão que toca.'],
   },
+  {
+    id: 'slap',
+    title: 'Slap em oitavas',
+    focus: 'thumb e pop no groove I–IV–V',
+    why: 'A oitava é o desenho básico do slap: polegar na nota grave, pop na oitava. Passar o desenho pelos acordes I, IV e V do tom treina a mão direita e, ao mesmo tempo, a progressão mais comum do blues e do funk.',
+    how: 'Para cada acorde: T (polegar) na fundamental, P (pop) na oitava, T, P. Abafe tudo entre os ataques; a mão esquerda solta a pressão logo depois de cada nota.',
+    perBeat: 4,
+    startBpm: 60,
+    positions: 2,
+    positionLabel: (i) => (i === 0 ? 'fundamental na corda mais grave' : 'fundamental na 2ª corda'),
+    usesKey: true,
+    lesson: 'w10-slap',
+    instrument: 'bass',
+    tips: ['O polegar bate perto do fim do braço e quica, girando o antebraço; o pop engancha a corda e solta, sem puxar demais.', 'Volume igual entre T e P é a meta. Se o pop estiver muito mais alto, puxe menos; se o T estiver abafado, bata e saia mais rápido da corda.'],
+  },
+  {
+    id: 'walking',
+    title: 'Walking bass I–IV–V–I',
+    focus: 'arpejos de 7ª em semínimas, sem parar',
+    why: 'Walking bass é tocar o arpejo de cada acorde, uma nota por tempo. Com os acordes dominantes (7) do I, IV e V, você treina os arpejos de 7ª do mundo de Acordes e a sensação de "andar" sobre a harmonia.',
+    how: 'Um compasso por acorde: 1, 3, 5 e b7, uma semínima por clique. Mão parada na posição; dedos alternados.',
+    perBeat: 1,
+    startBpm: 80,
+    positions: 2,
+    positionLabel: (i) => (i === 0 ? 'fundamental na corda mais grave' : 'fundamental na 2ª corda'),
+    usesKey: true,
+    lesson: 'w10-walking',
+    instrument: 'bass',
+    tips: ['Todas as notas com a mesma duração: cada uma soa até a próxima começar (legato), sem buracos.', 'Diga o grau de cada nota em voz alta (1, 3, 5, b7). Depois tente trocar a b7 por uma nota a meio tom do próximo acorde.'],
+  },
+  {
+    id: 'legato',
+    title: 'Legato na pentatônica',
+    focus: 'hammer-ons e pull-offs com volume igual',
+    why: 'Com duas notas por corda, a pentatônica é perfeita para legato: palheta só na primeira nota de cada corda, a segunda sai de hammer-on (subindo) ou pull-off (descendo). Fluidez de solo e força da mão esquerda.',
+    how: 'Subindo: palheta + hammer-on em cada corda. Descendo: palheta + pull-off. Uma caixa por dia.',
+    perBeat: 2,
+    startBpm: 70,
+    positions: 5,
+    positionLabel: (i) => `caixa ${i + 1}`,
+    usesKey: true,
+    lesson: 'w11-legato',
+    instrument: 'guitar',
+    tips: ['Bata o dedo do hammer-on logo atrás do traste, com firmeza; no pull-off, puxe a corda de leve para baixo ao sair.', 'As notas ligadas têm que soar quase tão alto quanto as palhetadas. Abafe as cordas que não estão tocando.'],
+  },
+  {
+    id: 'sweep',
+    title: 'Sweep em tríades',
+    focus: 'arpejos varridos, uma nota por corda',
+    why: 'O sweep é a palhetada econômica levada ao arpejo: um movimento só de palheta atravessa as cordas. Treina sincronia fina entre as mãos e os arpejos maiores do mundo de Acordes.',
+    how: 'Subindo, todas as palhetadas para baixo num movimento contínuo; descendo, todas para cima. Cada nota soa sozinha: solte o dedo assim que a próxima tocar.',
+    perBeat: 3,
+    startBpm: 60,
+    positions: 3,
+    positionLabel: (i) => ARPEGGIO_SHAPES[i].name,
+    usesKey: true,
+    lesson: 'w11-sweep',
+    instrument: 'guitar',
+    tips: ['A palheta não para em cada corda: ela "cai" de uma para a outra. Comece muito devagar, ouvindo se cada nota está separada.', 'Se as notas soarem juntas como um acorde, a mão esquerda está segurando demais: levante cada dedo logo depois da sua nota.'],
+  },
 ]
+
+/** Exercícios do Treino para o instrumento (os de técnica são de um instrumento só). */
+export function drillsFor(kind?: InstrumentKind) {
+  if (!kind) return DRILLS
+  const family = kind === 'guitar6' ? 'guitar' : 'bass'
+  return DRILLS.filter((d) => !d.instrument || d.instrument === family)
+}
 
 const DAY_MS = 24 * 3600 * 1000
 /** Número do dia (local), para sortear exercício, tom e posição de forma estável ao longo do dia. */
 export const dayNumber = (d = new Date()) => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / DAY_MS)
 
-export const drillOfDay = (d = new Date()) => DRILLS[dayNumber(d) % DRILLS.length]
+export const drillOfDay = (d = new Date(), kind?: InstrumentKind) => {
+  const list = drillsFor(kind)
+  return list[dayNumber(d) % list.length]
+}
 
 /** Tom do dia: percorre o ciclo das quintas, para todos os tons aparecerem. */
 export const KEYS_CYCLE = [9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2]
@@ -156,10 +228,10 @@ function scaleByString(inst: Instrument, root: number, steps: readonly number[],
 }
 
 /** Arpejo (tríade) na forma cuja fundamental está em `string`: notas do acorde nas 4 casas da forma. */
-function arpeggio(inst: Instrument, root: number, string: number, third: 3 | 4): FretPos[] {
+function arpeggio(inst: Instrument, root: number, string: number, third: 3 | 4, extra: number[] = []): FretPos[] {
   const s = Math.min(string, inst.openMidi.length - 1)
   const f = fretOn(inst, s, root, 1)
-  const pcs = [root, mod12(root + third), mod12(root + 7)]
+  const pcs = [root, mod12(root + third), mod12(root + 7), ...extra.map((e) => mod12(root + e))]
   const out: FretPos[] = []
   inst.openMidi.forEach((open, str) => {
     for (let fret = Math.max(0, f - 1); fret <= f + 3; fret++) if (pcs.includes(mod12(open + fret)) && (str > s || (str === s && fret >= f))) out.push({ string: str, fret })
@@ -202,6 +274,23 @@ export function drillSequence(inst: Instrument, drill: Drill, root: number, posi
         { string: high, fret: r + i + shift },
       ]).flat()
       return fitNeck(inst, seq)
+    }
+    case 'slap': {
+      const low = Math.min(pos, n - 3)
+      const high = low + 2
+      const shift = 12 - (inst.openMidi[high] - inst.openMidi[low])
+      const r = fretOn(inst, low, root, 1)
+      // I, IV e V na mesma corda: T-P-T-P em cada um
+      return fitNeck(inst, [0, 5, 7, 0].flatMap((d) => [0, 1, 2, 3].map((k) => (k % 2 ? { string: high, fret: r + d + shift } : { string: low, fret: r + d }))))
+    }
+    case 'walking':
+      // 1-3-5-b7 de I7, IV7, V7 e I7, cada um na forma com a fundamental na corda escolhida
+      return fitNeck(inst, [0, 5, 7, 0].flatMap((d) => arpeggio(inst, mod12(root + d), pos, 4, [10]).slice(0, 4)))
+    case 'legato':
+      return upAndDown(scaleByString(inst, root, SCALES.minorPentatonic.steps, 2, pos))
+    case 'sweep': {
+      const { string } = ARPEGGIO_SHAPES[pos]
+      return fitNeck(inst, upAndDown(arpeggio(inst, root, string, 4)))
     }
   }
   return []

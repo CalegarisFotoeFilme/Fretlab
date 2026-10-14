@@ -117,8 +117,9 @@
 - Mundo 10 **Técnica de baixo** (`world10-bass-technique.ts`): dois dedos, abafamento, ghost notes, slap, ligados, walking (arpejos de 7ª), palheta, tapping/revisão.
 - Mundo 11 **Técnica de guitarra** (`world11-guitar-technique.ts`): alternada, palm mute, econômica/string skipping, legato, bends/vibrato, sweep (arpejos), pestana (formas de E e A), tapping/velocidade.
 - `World.instrument` + `worldsFor(kind)`; a trilha e a "próxima lição" usam só os mundos do instrumento configurado. Teste em `generate.test.ts`.
-- Falta (próximo passo): drills técnicos no Treino do Dia (`src/training/drills.ts`), símbolos de técnica (T/P, x) na notação, bend conferido pelo detector de altura.
-- Atenção: o service worker (PWA) também roda no app para Mac; logo depois de instalar uma build nova, a primeira abertura pode mostrar a versão anterior. Reabrir resolve. Avaliar desligar o SW no Tauri.
+- Treino do Dia: drills de técnica com `instrument` (`slap`, `walking` no baixo; `legato`, `sweep` na guitarra), `drillsFor(kind)`; o exercício do dia sorteia só entre os do instrumento.
+- Service worker: registrado à mão em `main.tsx` (`injectRegister: false`) e só no navegador; no app para Mac ele é removido (e o cache apagado), então uma build nova aparece já na primeira abertura.
+- Falta: símbolos de técnica (T/P, x) na notação; bend conferido pelo detector de altura (exercício tocado, com nota-alvo).
 
 ### C0. Planejamento original (referência)
 

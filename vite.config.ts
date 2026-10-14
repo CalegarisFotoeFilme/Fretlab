@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
     mode !== 'artifact' &&
     VitePWA({
       registerType: 'autoUpdate',
+      // registro feito em main.tsx: no app para Mac o service worker fica desligado
+      injectRegister: false,
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'FretLab',
