@@ -108,15 +108,29 @@ fn read_download(path: String, downloads: State<Downloads>) -> Result<Vec<u8>, S
     std::fs::read(&path).map_err(|e| e.to_string())
 }
 
+/// Porta local em que o app é servido. Em http://localhost (e não tauri://) o player do YouTube
+/// aceita ser embutido: ele exige um "referer" de página web.
+const PORT: u16 = 47321;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_localhost::Builder::new(PORT).build())
+        .plugin(tauri_plugin_http::init())
         .manage(Downloads::default())
         .invoke_handler(tauri::generate_handler![open_songsterr, read_download])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())?;
             }
+            // em desenvolvimento, o servidor do Vite; no app, o servidor local embutido
+            let url = if cfg!(debug_assertions) { "http://localhost:5173".to_string() } else { format!("http://localhost:{PORT}") };
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().expect("url local")))
+                .title("FretLab")
+                .inner_size(1600.0, 1000.0)
+                .min_inner_size(900.0, 600.0)
+                .maximized(true)
+                .build()?;
             Ok(())
         })
         .run(tauri::generate_context!())

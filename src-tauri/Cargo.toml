@@ -24,3 +24,5 @@ log = "0.4"
 tauri = { version = "2.12.3", features = [] }
 tauri-plugin-log = "2"
 url = "2"
+tauri-plugin-localhost = "2"
+tauri-plugin-http = "2"

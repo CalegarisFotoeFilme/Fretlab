@@ -1,11 +1,24 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "App servido em http://localhost: eventos, comandos e HTTP só para a API do Songsterr",
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:default"
-  ]
+    "core:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://www.songsterr.com/api/*"
+        }
+      ]
+    }
+  ],
+  "remote": {
+    "urls": [
+      "http://localhost:*"
+    ]
+  }
 }

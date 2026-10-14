@@ -8,7 +8,10 @@ import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
 import { alphaTabPaths, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
+import { isDesktop } from '../library/desktop'
 import { analyzeSong } from '../library/songAnalysis'
+import { syncAvailable, videoLabel } from '../library/songsterrSync'
+import { useOriginalAudio } from '../library/useOriginalAudio'
 import { db } from '../progress/db'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { mod12 } from '../theory/notes'
@@ -49,6 +52,11 @@ export function SongPage() {
   const expectedRef = useRef<Set<number> | null>(null)
   const lastWaitedRef = useRef<AT.model.Beat | null>(null)
   const noteName = useNoteName()
+  // áudio original do YouTube sincronizado com a tab (app para Mac)
+  const videoHost = useRef<HTMLDivElement>(null)
+  const original = useOriginalAudio(apiRef, videoHost, song?.songsterrUrl)
+  const videoOn = original.state.status === 'on' || original.state.status === 'loading'
+  const [videoSmall, setVideoSmall] = useState(false)
   const [mix, setMix] = useState<Mix>('band')
   // controles flutuantes: expandidos ou só a barra compacta (lembra a escolha neste navegador)
   const [expanded, setExpanded] = useState(() => {
@@ -271,6 +279,10 @@ export function SongPage() {
     t: toggleMute,
     w: toggleWait,
     c: toggleExpanded,
+    o: () => {
+      if (!syncAvailable() || !song?.songsterrUrl) return
+      void (videoOn ? original.disable() : original.enable())
+    },
     '[': () => goToBar(Math.max(0, bar - 1)),
     ']': () => goToBar(Math.min((score?.masterBars.length ?? 1) - 1, bar + 1)),
     ...Object.fromEntries(MIXES.map((x) => [x.kbd, () => changeMix(x.value)])),
@@ -331,10 +343,61 @@ export function SongPage() {
           <div ref={host} className="alphatab-host" />
         </div>
 
+        <div
+          className={`absolute left-4 top-24 z-20 aspect-video overflow-hidden rounded-xl border border-wood-700 bg-black shadow-2xl ${videoOn ? '' : 'hidden'} ${videoSmall ? 'w-64' : 'w-[min(520px,45%)]'}`}
+        >
+          <div ref={videoHost} className="size-full" />
+          <button onClick={() => setVideoSmall((v) => !v)} className="absolute right-1.5 top-1.5 rounded-md bg-black/70 px-2 py-0.5 text-xs text-pearl" aria-label={videoSmall ? 'Aumentar o vídeo' : 'Diminuir o vídeo'}>
+            {videoSmall ? 'aumentar' : 'diminuir'}
+          </button>
+        </div>
+
         <div className="fixed inset-x-2 bottom-[4.75rem] z-20 md:absolute md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[min(820px,calc(100%-2rem))]">
           {expanded && (
             <div id="player-controls" className="mb-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-4 shadow-2xl grid gap-5 lg:grid-cols-2">
               <div>
+                <div className="mb-4">
+                  <h2 className="eyebrow mb-2">Áudio <Kbd>O</Kbd></h2>
+                  {syncAvailable() && song.songsterrUrl ? (
+                    <>
+                      <Segmented<string>
+                        label="Áudio"
+                        value={videoOn ? 'video' : 'midi'}
+                        onChange={(v) => void (v === 'video' ? original.enable() : original.disable())}
+                        options={[
+                          { value: 'midi', label: 'Sintetizador (MIDI)' },
+                          { value: 'video', label: 'Gravação (YouTube)' },
+                        ]}
+                      />
+                      {original.state.status === 'on' && original.videos.length > 1 && (
+                        <select
+                          className="mt-2 w-full min-h-10 rounded-xl bg-wood-900 border border-wood-700 px-3 text-sm"
+                          aria-label="Versão do vídeo"
+                          value={original.videos.indexOf(original.state.video)}
+                          onChange={(e) => void original.enable(Number(e.target.value))}
+                        >
+                          {original.videos.map((v, i) => (
+                            <option key={v.videoId} value={i}>
+                              {videoLabel(v, original.trackNames)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {original.state.status === 'loading' && <p className="mt-2 text-xs text-pearl-dim">{original.state.message}</p>}
+                      {original.state.status === 'error' && <p className="mt-2 text-xs text-led-red">{original.state.message}</p>}
+                      {original.state.status === 'on' && original.state.warning && <p className="mt-2 text-xs text-led-amber">{original.state.warning}</p>}
+                      {original.state.status === 'on' && (
+                        <p className="mt-2 text-xs text-pearl-faint">A gravação manda no tempo: velocidade e loop continuam valendo; os modos de faixa e o metrônomo são do sintetizador.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-pearl-faint">
+                      {isDesktop()
+                        ? 'Para tocar com a gravação original, a música precisa do link do Songsterr (as baixadas pela janela do Songsterr já vêm com ele).'
+                        : 'Tocar com a gravação original (YouTube) sincronizada funciona no app para Mac.'}
+                    </p>
+                  )}
+                </div>
                 <label className="block">
                   <span className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2 font-semibold"><Gauge className="size-4" aria-hidden /> Velocidade</span>
@@ -433,7 +496,7 @@ export function SongPage() {
                 </span>
               )}
               <span className="hidden lg:inline max-w-40 truncate rounded-lg bg-wood-950/70 px-2 py-1 text-xs font-semibold text-pearl-dim" title="O que tocar (1–4)">
-                {mixLabel}
+                {videoOn ? 'Gravação (YouTube)' : mixLabel}
               </span>
               <button
                 onClick={toggleExpanded}

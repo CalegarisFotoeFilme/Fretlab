@@ -144,3 +144,19 @@ describe('MIDI → Guitar Pro', () => {
     expect(score.masterBars.length).toBeGreaterThan(10)
   })
 })
+
+describe('sincronia com o Songsterr', () => {
+  it('lê o número da música e converte pontos por compasso tocado (com repetição)', async () => {
+    const { songsterrSongId, toFlatSyncPoints } = await import('./songsterrSync')
+    expect(songsterrSongId('https://www.songsterr.com/a/wsa/metallica-master-of-puppets-tab-s455')).toBe(455)
+    expect(songsterrSongId('https://www.songsterr.com/a/wsa/x-bass-tab-s23063t2')).toBe(23063)
+    // compassos 0,1,1,2 (o 1 repete): o segundo 1 é a ocorrência 1
+    const flat = toFlatSyncPoints([{ index: 0 }, { index: 1 }, { index: 1 }, { index: 2 }], [0.5, 2, 3.5, 5, 6.5])
+    expect(flat.map((p) => [p.barIndex, p.barOccurence, p.millisecondOffset])).toEqual([
+      [0, 0, 500],
+      [1, 0, 2000],
+      [1, 1, 3500],
+      [2, 0, 5000],
+    ])
+  })
+})
