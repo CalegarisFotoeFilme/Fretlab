@@ -1,8 +1,9 @@
-import { Gauge, Guitar, ListMusic, Route, SlidersHorizontal } from 'lucide-react'
+import { Dumbbell, Gauge, Guitar, ListMusic, Route, SlidersHorizontal } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 
 const NAV = [
   { to: '/', label: 'Trilha', icon: Route },
+  { to: '/treino', label: 'Treino', icon: Dumbbell },
   { to: '/braco', label: 'Braço', icon: Guitar },
   { to: '/afinador', label: 'Afinador', icon: Gauge },
   { to: '/musicas', label: 'Músicas', icon: ListMusic },

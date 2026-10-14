@@ -29,10 +29,23 @@ export interface Song {
   lastOpenedAt?: number
 }
 
+/** Andamento de cada exercício técnico do Treino do Dia. */
+export interface DrillProgress {
+  id: string
+  /** andamento alvo atual */
+  bpm: number
+  /** maior andamento tocado limpo */
+  best: number
+  /** dias em que o exercício foi feito */
+  sessions: number
+  lastDay: string
+}
+
 export const db = new Dexie('fretlab') as Dexie & {
   lessons: EntityTable<LessonProgress, 'lessonId'>
   days: EntityTable<PracticeDay, 'day'>
   songs: EntityTable<Song, 'id'>
+  drills: EntityTable<DrillProgress, 'id'>
 }
 
 db.version(1).stores({
@@ -40,3 +53,5 @@ db.version(1).stores({
   days: 'day',
   songs: '++id, title, addedAt, lastOpenedAt',
 })
+// v2: andamentos do Treino do Dia
+db.version(2).stores({ drills: 'id' })

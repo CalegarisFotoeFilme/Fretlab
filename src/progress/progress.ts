@@ -37,6 +37,23 @@ export async function recordAttempt(lessonId: string, accuracy: number, seconds:
   })
 }
 
+/**
+ * Registra uma sessão do aquecimento técnico. Tocou limpo: o alvo sobe 4 BPM (como no Guitar Aerobics,
+ * aos poucos). Ainda não: o alvo fica igual. Conta XP e minutos do dia.
+ */
+export async function recordDrill(id: string, bpm: number, clean: boolean, minutes: number) {
+  return db.transaction('rw', db.drills, db.days, async () => {
+    const prev = await db.drills.get(id)
+    const next = clean ? Math.min(240, bpm + 4) : bpm
+    await db.drills.put({ id, bpm: next, best: Math.max(prev?.best ?? 0, clean ? bpm : 0), sessions: (prev?.sessions ?? 0) + 1, lastDay: dayKey() })
+    const key = dayKey()
+    const day = (await db.days.get(key)) ?? { day: key, xp: 0, minutes: 0 }
+    const xp = clean ? 8 : 4
+    await db.days.put({ ...day, xp: day.xp + xp, minutes: day.minutes + minutes })
+    return { bpm: next, xp }
+  })
+}
+
 export interface ProgressSummary {
   lessons: Map<string, LessonProgress>
   xp: number
@@ -63,15 +80,16 @@ export function useProgress(): ProgressSummary | undefined {
 }
 
 export async function exportProgress() {
-  const [lessons, days] = await Promise.all([db.lessons.toArray(), db.days.toArray()])
-  return JSON.stringify({ app: 'fretlab', version: 1, exportedAt: new Date().toISOString(), lessons, days }, null, 2)
+  const [lessons, days, drills] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray()])
+  return JSON.stringify({ app: 'fretlab', version: 2, exportedAt: new Date().toISOString(), lessons, days, drills }, null, 2)
 }
 
 export async function importProgress(json: string) {
   const data = JSON.parse(json)
   if (data.app !== 'fretlab') throw new Error('Este arquivo não é um backup do FretLab.')
-  await db.transaction('rw', db.lessons, db.days, async () => {
+  await db.transaction('rw', db.lessons, db.days, db.drills, async () => {
     await db.lessons.bulkPut(data.lessons)
     await db.days.bulkPut(data.days)
+    if (Array.isArray(data.drills)) await db.drills.bulkPut(data.drills)
   })
 }

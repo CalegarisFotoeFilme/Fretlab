@@ -5,6 +5,7 @@ import './design/tokens.css'
 import { AppShell } from './components/AppShell'
 import { TrailPage } from './pages/TrailPage'
 import { LessonPage } from './pages/LessonPage'
+import { TrainingPage } from './pages/TrainingPage'
 import { ExplorerPage } from './pages/ExplorerPage'
 import { TunerPage } from './pages/TunerPage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -19,6 +20,7 @@ const router = createRouter([
     children: [
       { path: '/', element: <TrailPage /> },
       { path: '/licao/:id', element: <LessonPage /> },
+      { path: '/treino', element: <TrainingPage /> },
       { path: '/braco', element: <ExplorerPage /> },
       { path: '/afinador', element: <TunerPage /> },
       { path: '/musicas', element: <LibraryPage /> },
