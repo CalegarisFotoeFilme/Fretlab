@@ -47,7 +47,7 @@ export function LibraryPage() {
       </div>
       {isDesktop() && (
         <p className="-mt-5 mb-8 text-sm text-pearl-faint">
-          No app para Mac, o que você baixar (Guitar Pro ou MIDI) na janela do Songsterr entra sozinho aqui na biblioteca e abre na hora.
+          No app para Mac, o que você baixar (Guitar Pro ou MIDI) na janela do Songsterr entra sozinho aqui na biblioteca e abre na hora. O arquivo original fica guardado em ~/Library/Application Support/br.fretlab.desktop/musicas.
         </p>
       )}
 

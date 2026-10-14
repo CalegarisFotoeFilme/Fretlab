@@ -51,7 +51,7 @@ fn free_path(dir: PathBuf, name: &str) -> PathBuf {
         .unwrap_or(candidate)
 }
 
-/// Gancho de download das janelas do Songsterr: salva em Downloads sem sobrescrever e avisa o FretLab
+/// Gancho de download das janelas do Songsterr: salva na pasta "musicas" do app sem sobrescrever e avisa o FretLab
 /// (que importa o arquivo na biblioteca). Um pop-up que só servia para baixar fecha sozinho no fim.
 fn download_handler(handle: AppHandle) -> impl Fn(tauri::Webview, DownloadEvent) -> bool + Send + Sync + 'static {
     move |webview, event| {
@@ -65,7 +65,14 @@ fn download_handler(handle: AppHandle) -> impl Fn(tauri::Webview, DownloadEvent)
                     .filter(|n| !n.is_empty())
                     .or_else(|| url.path_segments().and_then(|mut s| s.next_back().map(String::from)))
                     .unwrap_or_else(|| "songsterr-download".into());
-                let dir = handle.path().download_dir().unwrap_or_else(|_| std::env::temp_dir());
+                // pasta "musicas" do próprio app (backup que não some se a pasta Downloads for limpa)
+                let dir = handle
+                    .path()
+                    .app_data_dir()
+                    .map(|d| d.join("musicas"))
+                    .or_else(|_| handle.path().download_dir())
+                    .unwrap_or_else(|_| std::env::temp_dir());
+                let _ = std::fs::create_dir_all(&dir);
                 *destination = free_path(dir, &name);
                 handle.state::<Pending>().0.lock().unwrap().insert(url.to_string(), destination.clone());
             }
