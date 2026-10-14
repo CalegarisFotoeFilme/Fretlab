@@ -1,4 +1,4 @@
-import { FIGURE_BEATS, type HitResult, type RhythmEvent } from '../exercises/rhythm'
+import { FIGURE_BEATS, type HitResult, type RhythmEvent } from '../exercises/rhythmScore'
 
 // Glifos SMuFL da fonte Bravura (a mesma usada pelo alphaTab).
 const G = {

@@ -7,7 +7,7 @@ import { Button } from '../components/ui'
 import type { RhythmSpec } from '../curriculum/types'
 import { useInstrument, useSettings } from '../progress/settings'
 import { parsePattern } from './generate'
-import { onsetBeats, scoreRhythm, totalBeats, type RhythmEvent, type RhythmScore } from './rhythm'
+import { onsetBeats, scoreRhythm, totalBeats, type RhythmEvent, type RhythmScore } from './rhythmScore'
 import type { ExerciseProps } from './types'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 

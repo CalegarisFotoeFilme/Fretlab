@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ALL_LESSONS, isUnlocked, nextLesson } from '../curriculum'
 import { makeInstrument, pcAt } from '../theory/instrument'
 import { findNoteRound, nameNoteRound, parsePattern } from './generate'
-import { totalBeats } from './rhythm'
+import { totalBeats } from './rhythmScore'
 
 const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
 

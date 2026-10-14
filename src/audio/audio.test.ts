@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NoteStabilizer, PitchAnalyzer } from './pitch'
-import { onsetBeats, scoreRhythm } from '../exercises/rhythm'
+import { onsetBeats, scoreRhythm } from '../exercises/rhythmScore'
 
 function sine(freq: number, size: number, sr: number, amp = 0.3) {
   const b = new Float32Array(size)

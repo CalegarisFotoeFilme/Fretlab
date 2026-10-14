@@ -1,7 +1,7 @@
 import type { FretRange, NotePool, StringSel } from '../curriculum/types'
 import { findPositions, pcAt, type FretPos, type Instrument } from '../theory/instrument'
 import { NATURALS, mod12, type PitchClass } from '../theory/notes'
-import type { Figure, RhythmEvent } from './rhythm'
+import type { Figure, RhythmEvent } from './rhythmScore'
 
 export type Rng = () => number
 export const pick = <T,>(arr: readonly T[], rng: Rng = Math.random) => arr[Math.floor(rng() * arr.length)]

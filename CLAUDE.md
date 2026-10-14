@@ -8,6 +8,7 @@
 - A teoria é própria (`src/theory`), sem dependência externa, e testada.
 - alphaTab é carregado como **UMD** de `public/vendor/alphatab` (copiado no `postinstall`). Use `alphaTabPaths()` (URLs absolutas: o worker roda de um blob).
 - MIDI do Songsterr: uma trilha-cabeçalho com nome + uma trilha por corda (canal = corda, 0 = aguda). Ver `src/library/midiImport.ts`.
+- Nada de arquivos cujo nome só difere na caixa (ex.: `Rhythm.tsx` e `rhythm.ts`): no macOS isso quebra os imports. `src/filenames.test.ts` verifica.
 - Nunca versionar arquivos de música do usuário (Songsterr). Para testar com um real: `FRETLAB_MIDI=... npx vitest run src/library`.
 
 ## Checagens antes de commit
