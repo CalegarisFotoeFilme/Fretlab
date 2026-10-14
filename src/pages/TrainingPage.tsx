@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Hint } from '../exercises/Hint'
 import { Check, ChevronDown, ChevronUp, Dumbbell, Play, RotateCcw, Square, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
@@ -247,6 +248,7 @@ function DrillPanel() {
           </div>
         </div>
 
+        <Hint key={`${drill.id}-${position}-${root}`} lines={drill.tips} />
         {saved?.best ? <p className="text-sm text-pearl-dim">Recorde limpo neste exercício: <span className="font-semibold text-pearl">{saved.best} BPM</span></p> : null}
       </div>
 

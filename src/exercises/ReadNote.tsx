@@ -1,4 +1,6 @@
 import { Mic, MicOff, Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { readNoteHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
@@ -10,7 +12,7 @@ import type { ReadNoteSpec } from '../curriculum/types'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { findMidiPositions, midiAt, pcAt, type FretPos } from '../theory/instrument'
 import { mod12 } from '../theory/notes'
-import { clefFor } from '../theory/staff'
+import { clefFor, staffNote } from '../theory/staff'
 import { nameNoteRound, type NameNoteRound } from './generate'
 import type { ExerciseProps } from './types'
 
@@ -25,6 +27,7 @@ export function ReadNote({ spec, onRoundDone, round }: ExerciseProps<ReadNoteSpe
   const prev = useRef(round)
   const midi = midiAt(inst, q.pos)
   const clef = clefFor(inst)
+  const written = staffNote(midi, clef)
   const mode = spec.answer === 'play' && forceTap ? 'fretboard' : spec.answer
 
   useEffect(() => {
@@ -72,6 +75,7 @@ export function ReadNote({ spec, onRoundDone, round }: ExerciseProps<ReadNoteSpe
         <div className="panel px-4 py-2">
           <Staff items={[{ midi, tone, label: result ? noteName(mod12(midi)) : undefined }]} clef={clef} ariaLabel="Nota na pauta" />
         </div>
+        {!result && <Hint key={round} lines={readNoteHints(written.step, clef, letterPath(written.step, clef))} />}
         <p className="text-xs text-pearl-faint text-center xl:text-left">
           {clef === 'treble' ? 'Clave de sol com 8 embaixo: a guitarra soa uma oitava abaixo do escrito.' : 'Clave de fá com 8 embaixo: o baixo soa uma oitava abaixo do escrito.'}
         </p>
@@ -134,4 +138,12 @@ export function ReadNote({ spec, onRoundDone, round }: ExerciseProps<ReadNoteSpe
       </div>
     </div>
   )
+}
+
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+/** Letras da linha do meio até a nota (B na clave de sol, D na de fá), degrau a degrau. */
+function letterPath(step: number, clef: 'treble' | 'bass') {
+  const ref = clef === 'treble' ? 6 : 1
+  const dir = Math.sign(step)
+  return Array.from({ length: Math.abs(step) + 1 }, (_, i) => LETTERS[(((ref + dir * i) % 7) + 7) % 7])
 }

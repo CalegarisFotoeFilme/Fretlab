@@ -1,4 +1,6 @@
 import { Ear } from 'lucide-react'
+import { Hint } from './Hint'
+import { dictationHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { uiSound } from '../audio/engine'
 import { RhythmStaff } from '../components/RhythmStaff'
@@ -62,6 +64,9 @@ export function RhythmDictation({ spec, onRoundDone, round }: ExerciseProps<Rhyt
           )
         })}
       </div>
+      {chosen === null && (
+        <Hint key={round} lines={dictationHints(parsePattern(q.answer).filter((e) => !e.rest).length, !parsePattern(q.answer)[0]?.rest)} />
+      )}
     </div>
   )
 }

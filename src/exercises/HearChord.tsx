@@ -1,4 +1,6 @@
 import { Ear } from 'lucide-react'
+import { Hint } from './Hint'
+import { hearChordHints, hearDegreeHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playChord, uiSound } from '../audio/engine'
 import { Button } from '../components/ui'
@@ -11,10 +13,12 @@ import type { ExerciseProps } from './types'
 
 /** Base dos exercícios de ouvido com opções: tocar, escolher, mostrar a certa e ouvir de novo. */
 function EarQuestion<T extends string | number>({
-  prompt, hint, options, answer, label, sub, onPlay, onDone, round,
+  prompt, hint, options, answer, label, sub, onPlay, onDone, round, hints,
 }: {
   prompt: string
   hint: string
+  /** dicas do professor (botão Dica) */
+  hints: string[]
   options: T[]
   answer: T
   label: (o: T) => string
@@ -64,6 +68,7 @@ function EarQuestion<T extends string | number>({
           )
         })}
       </div>
+      {picked === null && <Hint key={round} lines={hints} />}
     </div>
   )
 }
@@ -87,6 +92,7 @@ export function HearChord({ spec, onRoundDone, round }: ExerciseProps<HearChordS
       label={(o) => CHORDS[o].name}
       sub={(o) => CHORDS[o].formula.length === 2 ? '1-5' : `${CHORDS[o].symbol || 'maior'}`}
       onPlay={() => playChord(chordMidis(q.root, q.quality), spec.arpeggio)}
+      hints={hearChordHints(q.quality)}
       onDone={onRoundDone}
       round={round}
     />
@@ -116,6 +122,7 @@ export function HearDegree({ spec, onRoundDone, round }: ExerciseProps<HearDegre
       label={(d) => field[d - 1].roman}
       sub={(d) => (['tônica', 'subdominante', 'tônica', 'subdominante', 'dominante', 'tônica', 'dominante'] as const)[d - 1]}
       onPlay={play}
+      hints={hearDegreeHints(q.degree, field[q.degree - 1].quality, field[q.degree - 1].roman)}
       onDone={onRoundDone}
       round={round}
     />

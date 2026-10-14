@@ -1,4 +1,6 @@
 import { Check, X } from 'lucide-react'
+import { Hint } from './Hint'
+import { quizHints } from './hints'
 import { useMemo, useState } from 'react'
 import { uiSound } from '../audio/engine'
 import { Button } from '../components/ui'
@@ -41,6 +43,7 @@ export function Quiz({ spec, onRoundDone, round }: ExerciseProps<QuizSpec>) {
           )
         })}
       </div>
+      {chosen === null && <Hint key={round} lines={quizHints(q.options, q.answer)} />}
       {chosen !== null && (
         <div className="panel p-4 flex gap-3" role="status">
           {correct ? <Check className="size-5 text-led-green shrink-0" aria-hidden /> : <X className="size-5 text-led-red shrink-0" aria-hidden />}

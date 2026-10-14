@@ -1,4 +1,6 @@
 import { Mic, MicOff, SkipForward, Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { playIntervalHints } from './hints'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playInterval, playNote, uiSound } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
@@ -94,6 +96,7 @@ export function PlayInterval({ spec, onRoundDone, round }: ExerciseProps<PlayInt
             </Button>
           )}
         </div>
+        {!locked && <Hint key={round} lines={playIntervalHints(inst, q.root, q.semis, q.targets[0], noteName, mod12(rootMidi))} />}
         {playMode && (
           <div className="panel flex items-center justify-between gap-3 p-4">
             {status === 'on' ? (

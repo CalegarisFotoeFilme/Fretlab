@@ -1,4 +1,6 @@
 import { Check, Mic, MicOff, SkipForward, Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { noteSetHints } from './hints'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playNote, playSequence, uiSound } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
@@ -8,7 +10,7 @@ import { Kbd, useHotkeys } from '../components/useHotkeys'
 import type { NoteSetSpec } from '../curriculum/types'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { midiAt, pcAt, stringNumber, type FretPos } from '../theory/instrument'
-import { CHORDS, intervalBetween, mod12, prefersFlats } from '../theory/notes'
+import { CHORDS, SCALES, intervalBetween, mod12, prefersFlats } from '../theory/notes'
 import { noteSetRound, setName, setPcs, type NoteSetRound } from './generate'
 import type { ExerciseProps } from './types'
 
@@ -133,6 +135,20 @@ export function NoteSet({ spec, onRoundDone, round }: ExerciseProps<NoteSetSpec>
             <SkipForward className="size-4" aria-hidden /> Mostrar tudo <Kbd>esc</Kbd>
           </Button>
         </div>
+        {!done && (
+          <Hint
+            key={round}
+            lines={noteSetHints(
+              inst,
+              ('scale' in q.set ? SCALES[q.set.scale].steps : CHORDS[q.set.chord].formula).map((s) => intervalBetween(0, s).short).join(' – '),
+              required.find((t) => !found.some((f) => same(f, t))) ?? null,
+              (() => {
+                const m = required.find((t) => !found.some((f) => same(f, t)))
+                return m ? label(pcAt(inst, m)) : ''
+              })(),
+            )}
+          />
+        )}
         {playMode && (
           <div className="panel flex items-center gap-3 p-4">
             {status === 'on' ? (

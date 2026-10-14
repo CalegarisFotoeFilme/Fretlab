@@ -25,6 +25,8 @@ export interface Drill {
   usesKey: boolean
   /** lição da trilha que o exercício reforça */
   lesson?: string
+  /** dicas do professor (botão Dica), da mais geral à mais específica */
+  tips: string[]
 }
 
 const ARPEGGIO_SHAPES = [
@@ -46,6 +48,7 @@ export const DRILLS: Drill[] = [
     positionLabel: (i) => `casas ${1 + i * 4} a ${4 + i * 4}`,
     usesKey: false,
     lesson: 'w1-cordas-soltas',
+    tips: ['Comece 10–20 BPM abaixo do que consegue: a meta é tocar sem nenhuma nota abafada. Deixe cada dedo encostado na corda até o próximo precisar dela.', 'Polegar atrás do braço, mais ou menos atrás do dedo 2; dedos curvados, pontas na corda, logo atrás do traste. Se a mão cansar, você está apertando demais.'],
   },
   {
     id: 'pentatonica',
@@ -59,6 +62,7 @@ export const DRILLS: Drill[] = [
     positionLabel: (i) => `caixa ${i + 1}`,
     usesKey: true,
     lesson: 'w4-pentatonica-menor',
+    tips: ['Ache primeiro as fundamentais (laranja): elas são os pilares da caixa. Diga os graus em voz alta na primeira passada (1, b3, 4, 5, b7).', 'Para ficar musical, depois de limpa, troque a ordem: suba de duas em duas notas, ou faça frases curtas terminando na fundamental.'],
   },
   {
     id: 'maior',
@@ -72,6 +76,7 @@ export const DRILLS: Drill[] = [
     positionLabel: (i) => `começando no ${i + 1}º grau`,
     usesKey: true,
     lesson: 'w4-maior-posicao',
+    tips: ['Em 3 notas por corda, a mão abre um pouco mais: use dedos 1-2-4 quando houver tom + tom, e 1-3-4 quando houver semitom + tom.', 'Ao trocar de corda, a mão desliza uma ou duas casas: faça a troca sem parar o pulso do metrônomo, e repare onde caem os semitons (3–4 e 7–8).'],
   },
   {
     id: 'arpejos',
@@ -85,6 +90,7 @@ export const DRILLS: Drill[] = [
     positionLabel: (i) => ARPEGGIO_SHAPES[i].name,
     usesKey: true,
     lesson: 'w5-arpejo-maior',
+    tips: ['Pense no acorde inteiro antes de tocar: onde estão o 1, o 3 e o 5 nessa forma. A fundamental (laranja) é o ponto de partida e de chegada.', 'Toque cada nota separada (sem deixar soar junto), com o mesmo volume. Na volta, só a terça muda: escute a diferença entre maior e menor.'],
   },
   {
     id: 'oitavas',
@@ -98,6 +104,7 @@ export const DRILLS: Drill[] = [
     positionLabel: (i) => (i === 0 ? 'cordas 1ª e 3ª mais graves' : 'cordas 2ª e 4ª mais graves'),
     usesKey: true,
     lesson: 'w3-oitava',
+    tips: ['A mão que toca precisa “pular” a corda do meio: mire a corda de cima com calma no começo, mesmo se o andamento ficar lento.', 'Abafe a corda do meio com a parte de baixo do dedo que pressiona a nota grave; no baixo, também dá para usar o polegar ou a palma da mão que toca.'],
   },
 ]
 

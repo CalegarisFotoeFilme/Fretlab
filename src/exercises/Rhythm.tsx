@@ -1,4 +1,6 @@
 import { Mic, Play, Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { rhythmHints } from './hints'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { audioCtx, playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
@@ -136,6 +138,7 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
         <RhythmStaff events={events} playhead={playhead} hits={hitsForStaff} />
       </div>
 
+      {phase !== 'done' && <Hint key={round} lines={rhythmHints(onsetBeats(events))} />}
       <div aria-live="polite" className="text-center min-h-8">
         {phase === 'countin' && <p className="font-display text-4xl font-black text-enclosure">{countIn}</p>}
         {phase === 'playing' && <p className="text-pearl-dim">{playMode ? 'Toque agora!' : 'Agora!'}</p>}

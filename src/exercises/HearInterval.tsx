@@ -1,4 +1,6 @@
 import { Ear, Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { hearIntervalHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playInterval, uiSound } from '../audio/engine'
 import { Button } from '../components/ui'
@@ -74,6 +76,7 @@ export function HearInterval({ spec, onRoundDone, round }: ExerciseProps<HearInt
           )
         })}
       </div>
+      {!done && <Hint key={round} lines={hearIntervalHints(q.semis, q.options)} />}
       {done && (
         <p className="text-sm text-pearl-dim">
           Era {INTERVALS[q.semis].name.toLowerCase()} ({q.semis} {q.semis === 1 ? 'semitom' : 'semitons'}).{' '}

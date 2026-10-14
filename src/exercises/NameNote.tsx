@@ -1,4 +1,6 @@
 import { Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { nameNoteHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
 import { Fretboard } from '../components/Fretboard'
@@ -71,6 +73,7 @@ export function NameNote({ spec, onRoundDone, round }: ExerciseProps<NameNoteSpe
         <Button variant="ghost" onClick={() => playNote(midiAt(inst, q.pos))}>
           <Volume2 className="size-4" aria-hidden /> Ouvir a nota <Kbd>espaço</Kbd>
         </Button>
+        {answer === null && <Hint key={round} lines={nameNoteHints(inst, q.pos, noteName)} />}
       </div>
     </div>
   )

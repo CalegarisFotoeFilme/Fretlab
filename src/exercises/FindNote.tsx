@@ -1,4 +1,6 @@
 import { Mic, MicOff, SkipForward } from 'lucide-react'
+import { Hint } from './Hint'
+import { findNoteHints } from './hints'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
@@ -74,6 +76,7 @@ export function FindNote({ spec, onRoundDone, round }: ExerciseProps<FindNoteSpe
           Encontre <span className="font-display text-5xl xl:text-7xl font-black text-enclosure align-middle mx-1">{noteName(q.pc)}</span>
           <span className="block text-base xl:text-xl text-pearl-dim font-normal mt-1">{stringLabel}</span>
         </p>
+        <Hint key={round} lines={findNoteHints(inst, q.pc, q.targets[0], noteName)} />
         {!playMode && <p className="hidden xl:block text-sm text-pearl-faint">Teclado: Tab entra no braço, setas andam pelas casas, Enter responde.</p>}
         {playMode && (
           <div className="panel flex items-center justify-between gap-3 p-4">

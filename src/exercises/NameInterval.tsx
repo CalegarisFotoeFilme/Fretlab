@@ -1,4 +1,6 @@
 import { Volume2 } from 'lucide-react'
+import { Hint } from './Hint'
+import { nameIntervalHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playInterval, uiSound } from '../audio/engine'
 import { Fretboard } from '../components/Fretboard'
@@ -88,6 +90,7 @@ export function NameInterval({ spec, onRoundDone, round }: ExerciseProps<NameInt
         <Button variant="ghost" onClick={hear}>
           <Volume2 className="size-4" aria-hidden /> Ouvir as duas notas <Kbd>espaço</Kbd>
         </Button>
+        {!done && <Hint key={round} lines={nameIntervalHints(q.root, q.shown, q.semis)} />}
       </div>
     </div>
   )

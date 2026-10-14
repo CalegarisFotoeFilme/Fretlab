@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import type { ExerciseSpec } from '../curriculum/types'
+import { HINT_CAP, HintContext } from './Hint'
 import { FindNote } from './FindNote'
 import { HearChord, HearDegree } from './HearChord'
 import { HearInterval } from './HearInterval'
@@ -14,6 +16,20 @@ import { TheoryQuiz } from './TheoryQuiz'
 
 /** Escolhe o componente do exercício pelo tipo (usado nas lições e no Treino do Dia). */
 export function ExerciseView({ spec, round, onRoundDone }: { spec: ExerciseSpec; round: number; onRoundDone: (score: number) => void }) {
+  // rodada com dica vale no máximo 75%
+  const hinted = useRef(-1)
+  const props = {
+    round,
+    onRoundDone: (score: number) => onRoundDone(hinted.current === round ? Math.min(score, HINT_CAP) : score),
+  }
+  return (
+    <HintContext.Provider value={() => (hinted.current = round)}>
+      <Exercise spec={spec} {...props} />
+    </HintContext.Provider>
+  )
+}
+
+function Exercise({ spec, round, onRoundDone }: { spec: ExerciseSpec; round: number; onRoundDone: (score: number) => void }) {
   const props = { round, onRoundDone }
   switch (spec.type) {
     case 'find-note':
