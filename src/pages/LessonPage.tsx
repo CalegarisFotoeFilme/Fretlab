@@ -119,12 +119,12 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
       )}
 
       {phase === 'play' && (
-        <div key={attempt}>
+        <div key={attempt} className="xl:min-h-[calc(100dvh-8rem)] xl:flex xl:flex-col xl:justify-center">
           {ex.type === 'find-note' && <FindNote spec={ex} {...props} />}
           {ex.type === 'name-note' && <NameNote spec={ex} {...props} />}
           {ex.type === 'quiz' && <Quiz spec={ex} {...props} />}
           {ex.type === 'rhythm' && <Rhythm spec={ex} {...props} />}
-          <Button variant="ghost" className="mt-6" onClick={() => setPhase('teach')}>
+          <Button variant="ghost" className="mt-6 self-start" onClick={() => setPhase('teach')}>
             <ArrowLeft className="size-4" aria-hidden /> Rever explicação
           </Button>
         </div>

@@ -70,9 +70,9 @@ export function FindNote({ spec, onRoundDone, round }: ExerciseProps<FindNoteSpe
     <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)] xl:items-center xl:gap-10">
       <div className="text-center xl:text-left flex flex-col gap-4">
         <p className="eyebrow">{playMode ? 'Toque no instrumento' : 'Clique no braço'}</p>
-        <p className="mt-2 text-2xl font-semibold">
-          Encontre <span className="font-display text-5xl font-black text-enclosure align-middle mx-1">{noteName(q.pc)}</span>
-          <span className="block text-base text-pearl-dim font-normal mt-1">{stringLabel}</span>
+        <p className="mt-2 text-2xl xl:text-3xl font-semibold">
+          Encontre <span className="font-display text-5xl xl:text-7xl font-black text-enclosure align-middle mx-1">{noteName(q.pc)}</span>
+          <span className="block text-base xl:text-xl text-pearl-dim font-normal mt-1">{stringLabel}</span>
         </p>
         {!playMode && <p className="hidden xl:block text-sm text-pearl-faint">Teclado: Tab entra no braço, setas andam pelas casas, Enter responde.</p>}
         {playMode && (

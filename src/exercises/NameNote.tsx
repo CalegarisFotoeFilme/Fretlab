@@ -56,7 +56,7 @@ export function NameNote({ spec, onRoundDone, round }: ExerciseProps<NameNoteSpe
       <div className="flex flex-col gap-4 xl:order-2 -order-1">
         <div className="text-center xl:text-left">
           <p className="eyebrow">Que nota é essa?</p>
-          <p className="mt-2 text-xl font-semibold">{where}</p>
+          <p className="mt-2 text-xl xl:text-3xl font-semibold">{where}</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {q.options.map((pc, i) => {
