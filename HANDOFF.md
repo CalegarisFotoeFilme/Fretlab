@@ -86,20 +86,59 @@
 
 ## Próximos passos (prioridade)
 
-O plano original foi concluído (Mundos 3–9, Treino do Dia, modo espera, Ritmo II e leitura). Sugestões a partir daqui:
+> **Retome por aqui.** Última sessão: 2026-10-14, último commit `b81973f`. O app para Mac foi recompilado nesse commit (`src-tauri/target/release/bundle/macos/FretLab.app`). Tudo está commitado e publicado; as checagens passam (52 testes).
 
-1. Validar no Mac, com a pedaleira, o que depende de áudio real:
-   - modo espera do player;
-   - "desenhe no braço" tocando;
-   - ritmo pelo instrumento;
-   - leitura tocando.
-   Ajustar sensibilidade e latência se preciso.
-2. Treino do Dia: registrar os fatos errados (corda/casa, intervalo, grau) para uma repetição espaçada mais fina, além da revisão por lição.
-3. Leitura de partitura em mais posições (casas 5–8, 7–10…), leitura rítmica + melódica juntas e leitura de trechos curtos.
-4. Pentatônica nas 5 caixas conectadas (como o CAGED) e modos gregos completos.
-5. ~~Casco desktop com Tauri~~: feito (ver abaixo).
+### A. Pedidos do usuário ainda não feitos (nesta ordem)
+
+1. **Treino do Dia: controles flutuantes.** Transformar os controles do aquecimento num painel flutuante e minimizável, igual ao player de tabs (`SongPage`: barra compacta + painel expansível, tecla C, estado no `localStorage`). Na barra compacta:
+   - metrônomo e BPM −/+;
+   - "Ouvir no andamento";
+   - "Toquei limpo" e "Ainda não".
+   O braço, a tablatura e o "por que" ficam livres na tela.
+2. **Volume no player com sintetizador:**
+   - volume geral: `api.masterVolume`;
+   - volume por faixa: `api.changeTrackVolume([track], v)`, com um slider por faixa na lista "Faixas" do painel expandido;
+   - guardar os volumes por música (Dexie, campo novo em `Song`) ou na sessão.
+   No modo gravação (YouTube), o volume geral vai para `handler.masterVolume`.
+3. **Botão "Dica" (tecla H) em todos os exercícios e no Treino**, como um professor:
+   - dicas progressivas: a primeira só orienta, a segunda quase entrega a resposta;
+   - exemplos: achar nota → corda solta + quantas casas contar; intervalo → a forma ("corda de cima, 2 casas à frente"); desenhe no braço → próximo grau e onde ele cai; ouvido → característica do som; leitura → linha/espaço de referência;
+   - sugestão: a rodada com dica vale no máximo 0,75.
+   Implementar um componente `Hint` usado em cada exercício de `src/exercises/`.
+4. **SoundFont melhor** para o sintetizador (o atual `sonivox.sf2`, de 1,3 MB, soa fraco):
+   - em Ajustes, "Carregar SoundFont (.sf2/.sf3)", com o arquivo guardado no IndexedDB e passado ao alphaTab via `api.loadSoundFont(bytes)`;
+   - sugerir o GeneralUser GS (gratuito) e perguntar antes de baixar qualquer arquivo para o usuário.
+5. **Dica de entrada de áudio em Ajustes:** explicar que plugins (Neural DSP) e pedaleiras USB (Zoom G3X, Sonicake Pocket Master) **não impedem** o FretLab de ouvir. O macOS compartilha a entrada entre apps, e o FretLab lê o sinal que a pedaleira manda pelo USB, não a saída do plugin. Para a detecção, um patch limpo ou com pouco ganho funciona melhor.
+
+### B. Validar com o usuário (precisa do Mac e da pedaleira)
+
+- **Áudio original no app para Mac:** abrir uma música com link do Songsterr → painel do player → Áudio → "Gravação (YouTube)". No navegador, o fluxo foi validado com dados injetados (Dua Lipa, s474943: 92 compassos = 92 pontos, compassos 9–12 batendo com 16–22 s). Ainda não foi visto no app: confirmar que o YouTube toca servido em `http://localhost:47321`.
+- **Songsterr ao lado + download direto:** em Músicas → "Abrir o Songsterr ao lado" → baixar um GP → ele deve abrir sozinho na biblioteca (`useSongsterrImports`).
+- **Áudio real:**
+  - modo espera do player;
+  - "desenhe no braço" tocando;
+  - ritmo pelo instrumento;
+  - leitura tocando.
+  Ajustar sensibilidade e latência se preciso.
+- O app para Mac tem banco próprio. O progresso passa pelo backup em Ajustes; as músicas precisam ser reimportadas.
+
+### C. Ideias para depois
+
+1. Treino do Dia: repetição espaçada por fato errado (corda/casa, intervalo, grau), além da revisão por lição.
+2. Leitura em outras posições (casas 5–8, 7–10…) e de trechos curtos.
+3. Modos gregos completos.
 
 ## App para Mac (Tauri)
+
+- O app é servido em `http://localhost:47321` (`tauri-plugin-localhost`), e a janela principal é criada em `lib.rs`. Motivo: o iframe do YouTube exige referer de página web, e `tauri://` não manda.
+- `tauri-plugin-http` está liberado só para `https://www.songsterr.com/api/*`. A capability `default.json` usa `remote.urls: http://localhost:*`.
+- **Áudio original sincronizado** (`src/library/songsterrSync.ts`, `src/library/useOriginalAudio.ts`):
+  - revisão atual: `GET /api/meta/{songId}`;
+  - vídeos: `GET /api/video-points/{songId}/{revisionId}/list`, que devolve `videoId`, `feature` (original/alternative/backing/solo) e `points` (segundos do início de cada compasso **tocado**, com repetições expandidas);
+  - os pontos viram `FlatSyncPoint` pela ordem do `api.tickCache.masterBars`, e o alphaTab passa para `PlayerMode.EnabledExternalMedia`, com o YouTube como `handler` e `updatePosition` a cada 40 ms;
+  - armadilha: `seekTo` num vídeo parado faz o YouTube tocar. O handler pausa de novo e ignora o "PLAYING" por 800 ms;
+  - armadilha: chame `api.stop()` antes de destruir o player do YouTube.
+  - Em desenvolvimento dá para testar no navegador injetando `sessionStorage['fretlab.syncFixture']` com um `SongsterrSync` em JSON.
 
 - `src-tauri/`: Tauri 2. Comandos Rust:
   - `open_songsterr`: abre o Songsterr numa janela do app, na metade direita da tela;
