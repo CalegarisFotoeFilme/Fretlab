@@ -48,7 +48,10 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
   const startedAt = useRef(0)
   const navigate = useNavigate()
 
-  useEffect(() => window.scrollTo(0, 0), [phase])
+  // chaves: no Chrome novo scrollTo devolve uma Promise, e o React a trataria como função de limpeza
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [phase])
   useEffect(() => {
     startedAt.current = Date.now()
   }, [])

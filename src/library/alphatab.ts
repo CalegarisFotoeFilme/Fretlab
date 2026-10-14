@@ -2,8 +2,9 @@ import type * as AT from '@coderline/alphatab'
 
 // O alphaTab é carregado pelo build UMD em /vendor (copiado no postinstall), assim fontes,
 // soundfont e o worker são encontrados pelo mesmo caminho do script.
-// relativo ao documento: funciona tanto na raiz do site quanto publicado numa subpasta
-const BASE = 'vendor/alphatab/'
+// Parte do `base` do Vite ('/' no site, './' no claude.ai). Não pode ser relativo à página:
+// em /musicas/1 isso virava /musicas/vendor/... (404) e o player ficava em "Carregando som…".
+const BASE = `${import.meta.env.BASE_URL}vendor/alphatab/`
 const vendorUrl = (p: string) => new URL(BASE + p, document.baseURI).href
 
 declare global {

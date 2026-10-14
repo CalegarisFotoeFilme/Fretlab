@@ -41,20 +41,30 @@
 - Explorador do braço: escalas, acordes, campo harmônico, notas ou graus.
 - Afinador e ajustes: instrumento, afinação, nomes das notas, dispositivo de entrada, sensibilidade, compensação de latência, backup JSON.
 - Músicas:
-  - importa Guitar Pro, MusicXML e **MIDI do Songsterr** (convertido para GP com corda/casa exatas);
+  - importa Guitar Pro, MusicXML e **MIDI do Songsterr**. O MIDI é guardado como veio e convertido ao abrir (`midiToScore`), direto para o modelo do alphaTab. O conversor recupera:
+    - corda e casa;
+    - tercinas, sextinas e quintinas, e rasgueados;
+    - slides, bends, vibrato, hammer-on/pull-off, staccato e nota morta;
+    - a bateria.
+    Comparado com o GP oficial da Dua Lipa, o baixo bate em 83 de 92 compassos. As diferenças restantes são staccatos seguidos de pausa, que o MIDI não distingue (o som é idêntico);
   - player alphaTab com faixas, velocidade, loop, metrônomo e silenciar a própria faixa;
-  - painel **"Teoria desta música"** com tom estimado, escala no braço e campo harmônico;
+  - modos "O que tocar" (teclas 1–4): banda, só a faixa, faixa + bateria, faixa + metrônomo; "Tirar faixa" (T);
+  - controles flutuantes sobre a partitura, como no Songsterr: barra compacta sempre visível e painel expansível (C) com velocidade, "O que tocar", toggles e faixas. A escolha fica salva no `localStorage`;
+  - metrônomo visual em destaque no topo da partitura, fora dos controles: uma luz por tempo, o tempo forte pisca maior, com o nº do compasso (eventos de metrônomo do alphaTab);
+  - painel **"Teoria desta música"** (`src/theory/analysis.ts` + `src/library/songAnalysis.ts` + `src/components/SongTheory.tsx`):
+    - tom e graus mais tocados pela faixa;
+    - campo harmônico com os acordes usados (e funções T/S/D) e acordes fora do campo;
+    - progressão que mais se repete;
+    - análise do compasso (segue o cursor, ou `[`/`]`): acorde, grau e função, nota de repouso, notas com intervalo no acorde e grau no tom, escalas que servem e braço com as notas tocadas;
   - link do Songsterr abre em janela ao lado.
 - Atalhos de teclado com `<Kbd>` visível; layouts para ultrawide.
 - Versão publicada no claude.ai (sem microfone): https://claude.ai/artifact/LJUV58kSfHGGHbgwp58LAr (build: `npx vite build --mode artifact`).
 
+**Testado no Mac (2026-10-14):** a pedaleira é reconhecida e o afinador funciona; o player toca GP e MIDI.
+
 **Não testado ou limitações conhecidas:**
-- Detecção de nota e de ataques com a pedaleira real. A latência no ritmo pode precisar de calibração.
-- Som do player alphaTab num Chrome real.
-- Conversor MIDI:
-  - a bateria fica de fora (alphaTab precisa de mapeamento de articulações de percussão);
-  - quiálteras são aproximadas para fusas;
-  - o Songsterr usa compassos como 21/32, que são mantidos como vieram.
+- Detecção de ataques no exercício de ritmo com a pedaleira. A latência pode precisar de calibração.
+- Conversor MIDI: palm mute, harmônicos, dedilhado e afinações "inventadas" de piano não existem no MIDI. Para a tab idêntica, use o **GP do Songsterr**, que é o formato recomendado.
 - A estimativa de tom confunde relativos (Sol maior × Mi menor) em trechos curtos.
 
 ## Próximos passos (prioridade)
@@ -87,6 +97,16 @@
 | `scripts/` | `copy-alphatab.mjs` (postinstall), `screenshots.mjs` (Playwright: `VIEWPORTS=ultrawide,desktop,mobile`) |
 
 ## Armadilhas já encontradas (não repetir)
+
+- **Caminhos do `public/`**: use `import.meta.env.BASE_URL`, nunca um caminho relativo à página. Em `/musicas/1`, o caminho `vendor/...` virava `/musicas/vendor/...` (404) e o player ficava em "Carregando som…".
+- **`useEffect` com corpo sem chaves**: no Chrome novo, `window.scrollTo` devolve uma Promise. Quando o efeito a devolvia, o React quebrava com "destroy is not a function".
+- **MIDI do Songsterr "toca" as articulações**:
+  - slide = escala cromática de notas curtas e iguais, mais fracas que a origem; o alvo pode ter duração zero;
+  - slide de um semitom = rampa de pitch bend (faixa de ±24) no fim da nota;
+  - ligado = nota mais fraca que a última nota palhetada;
+  - staccato = soa metade do intervalo até o próximo ataque;
+  - nota morta = ~1/30 de semínima.
+  Para testar o conversor, compare com o GP oficial da mesma música.
 
 - **Maiúsculas no macOS**: não crie arquivos que só diferem na caixa. Há um teste para isso.
 - **alphaTab**:

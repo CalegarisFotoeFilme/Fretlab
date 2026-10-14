@@ -1,20 +1,26 @@
 import type * as AT from '@coderline/alphatab'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ExternalLink, Gauge, Pause, Play, Repeat, Square, Timer, VolumeX } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Pause, Play, Repeat, Square, Timer, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { playSequence } from '../audio/engine'
-import { Fretboard } from '../components/Fretboard'
+import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
-import { alphaTabPaths, collectNotes, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
+import { alphaTabPaths, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
+import { analyzeSong } from '../library/songAnalysis'
 import { db } from '../progress/db'
-import { useInstrument, useNoteName, useSettings } from '../progress/settings'
-import { findPositions } from '../theory/instrument'
-import { estimateKey, histogramOf, type KeyGuess } from '../theory/key'
-import { chordName, chordNotes, harmonicField, intervalBetween, mod12, prefersFlats, scaleNotes } from '../theory/notes'
+import { useInstrument, useSettings } from '../progress/settings'
 
 type View = 'tab' | 'both'
+/** O que soa no player: a banda toda ou só a faixa escolhida (com bateria ou metrônomo de apoio). */
+type Mix = 'band' | 'solo' | 'drums' | 'click'
+
+const MIXES: { value: Mix; label: string; hint: string; kbd: string }[] = [
+  { value: 'band', label: 'Banda', hint: 'Todas as faixas', kbd: '1' },
+  { value: 'solo', label: 'Só a faixa', hint: 'Só a faixa escolhida', kbd: '2' },
+  { value: 'drums', label: 'Faixa + bateria', hint: 'A faixa escolhida com a bateria', kbd: '3' },
+  { value: 'click', label: 'Faixa + metrônomo', hint: 'A faixa escolhida com o metrônomo', kbd: '4' },
+]
 
 export function SongPage() {
   const { id } = useParams()
@@ -34,8 +40,30 @@ export function SongPage() {
   const [looping, setLooping] = useState(false)
   const [metronome, setMetronome] = useState(false)
   const [muteMine, setMuteMine] = useState(false)
+  const [mix, setMix] = useState<Mix>('band')
+  // controles flutuantes: expandidos ou só a barra compacta (lembra a escolha neste navegador)
+  const [expanded, setExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('fretlab.player.expanded') !== '0'
+    } catch {
+      return true
+    }
+  })
+  const toggleExpanded = () => {
+    const v = !expanded
+    setExpanded(v)
+    try {
+      localStorage.setItem('fretlab.player.expanded', v ? '1' : '0')
+    } catch {
+      // sem armazenamento local: só não lembra
+    }
+  }
   const [view, setView] = useState<View>('tab')
   const [time, setTime] = useState({ cur: 0, end: 0 })
+  // compasso em análise (segue o cursor) e metrônomo visual: tempo atual e tempos do compasso
+  const [bar, setBar] = useState(0)
+  const [beat, setBeat] = useState<{ n: number; of: number; id: number } | null>(null)
+  const analysis = useMemo(() => (score ? analyzeSong(score) : null), [score])
 
   // O Dexie devolve um Blob novo a cada leitura: usa uma chave estável para não recriar o player.
   const fileKey = song?.file ? `${song.id}:${song.fileName}:${song.file.size}` : null
@@ -88,8 +116,28 @@ export function SongPage() {
           }
         })
         inst.playerReady.on(() => setReady(true))
+        // tempos por compasso (fórmula de compasso de onde o cursor está), para o metrônomo visual
+        let beatsPerBar = 4
+        inst.playedBeatChanged.on((b) => {
+          setBar(b.voice.bar.masterBar.index)
+          beatsPerBar = b.voice.bar.masterBar.timeSignatureNumerator
+        })
+        inst.beatMouseDown.on((b) => setBar(b.voice.bar.masterBar.index))
+        // metrônomo visual: os eventos do click chegam junto com o som, mesmo com o volume do metrônomo zerado
+        inst.midiEventsPlayedFilter = [at.midi.MidiEventType.AlphaTabMetronome]
+        let tick = 0
+        inst.midiEventsPlayed.on((e) => {
+          for (const ev of e.events) {
+            const m = ev as AT.midi.AlphaTabMetronomeEvent
+            if (!m.isMetronome) continue
+            setBeat({ n: m.metronomeNumerator, of: Math.max(beatsPerBar, m.metronomeNumerator + 1), id: ++tick })
+          }
+        })
         inst.error.on((e) => setError(`Erro no leitor de tablatura: ${e.message}`))
-        inst.playerStateChanged.on((e) => setPlaying(e.state === 1))
+        inst.playerStateChanged.on((e) => {
+          setPlaying(e.state === 1)
+          if (e.state !== 1) setBeat(null)
+        })
         let last = 0
         inst.playerPositionChanged.on((e) => {
           if (Math.abs(e.currentTime - last) > 250 || e.currentTime < last) {
@@ -98,7 +146,14 @@ export function SongPage() {
           }
         })
         if (!paths.soundFont) void loadSoundFontBase64(inst).catch(() => setError('Não foi possível carregar os timbres do player.'))
-        inst.load(new Uint8Array(await file.arrayBuffer()))
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const name = songRef.current?.fileName ?? ''
+        if (/\.midi?$/i.test(name)) {
+          // MIDI do Songsterr: convertido aqui, direto para o modelo do alphaTab
+          const { midiToScore } = await import('../library/midiImport')
+          if (disposed) return
+          inst.renderScore(midiToScore(at, bytes, name).score)
+        } else inst.load(bytes)
         void db.songs.update(Number(id), { lastOpenedAt: Date.now() })
       } catch (e) {
         setError((e as Error).message)
@@ -113,13 +168,35 @@ export function SongPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileKey])
 
+  /** Aplica solo/mudo no player a partir do modo, da faixa escolhida e de "Tirar faixa". */
+  const applyMix = (m: Mix, t: AT.model.Track | null, mute: boolean, click = metronome) => {
+    const api = apiRef.current
+    const all = api?.score?.tracks
+    if (!api || !all || !t) return
+    api.changeTrackSolo(all, false)
+    api.changeTrackMute(all, false)
+    if (m !== 'band') api.changeTrackSolo([t, ...(m === 'drums' ? all.filter((x) => x.isPercussion && x !== t) : [])], true)
+    if (mute) api.changeTrackMute([t], true)
+    api.metronomeVolume = click ? 1 : 0
+    api.countInVolume = click ? 1 : 0
+  }
+  const changeMix = (m: Mix) => {
+    setMix(m)
+    // "Faixa + metrônomo" liga o metrônomo; sair dele volta ao estado do botão
+    const click = m === 'click' || (mix !== 'click' && metronome)
+    setMetronome(click)
+    applyMix(m, track, muteMine, click)
+  }
+  const goToBar = (i: number) => {
+    setBar(i)
+    const api = apiRef.current
+    const mb = api?.score?.masterBars[i]
+    if (api && mb && !playing) api.tickPosition = mb.start
+  }
   const selectTrack = (t: AT.model.Track) => {
-    if (muteMine && track) {
-      apiRef.current?.changeTrackMute([track], false)
-      apiRef.current?.changeTrackMute([t], true)
-    }
     setTrack(t)
     apiRef.current?.renderTracks([t])
+    applyMix(mix, t, muteMine)
   }
   const changeSpeed = (v: number) => {
     const s = Math.min(1.5, Math.max(0.25, Math.round(v * 100) / 100))
@@ -136,17 +213,12 @@ export function SongPage() {
   const toggleMetronome = () => {
     const v = !metronome
     setMetronome(v)
-    const api = apiRef.current
-    if (api) {
-      api.metronomeVolume = v ? 1 : 0
-      api.countInVolume = v ? 1 : 0
-    }
+    applyMix(mix, track, muteMine, v)
   }
   const toggleMute = () => {
     const v = !muteMine
     setMuteMine(v)
-    const api = apiRef.current
-    if (api && track) api.changeTrackMute([track], v)
+    applyMix(mix, track, v)
   }
   const changeView = (v: View) => {
     setView(v)
@@ -162,6 +234,11 @@ export function SongPage() {
     Escape: () => apiRef.current?.stop(),
     l: toggleLoop,
     m: toggleMetronome,
+    t: toggleMute,
+    c: toggleExpanded,
+    '[': () => goToBar(Math.max(0, bar - 1)),
+    ']': () => goToBar(Math.min((score?.masterBars.length ?? 1) - 1, bar + 1)),
+    ...Object.fromEntries(MIXES.map((x) => [x.kbd, () => changeMix(x.value)])),
     '-': () => changeSpeed(speed - 0.05),
     '=': () => changeSpeed(speed + 0.05),
     '+': () => changeSpeed(speed + 0.05),
@@ -179,10 +256,12 @@ export function SongPage() {
 
   const fmt = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms / 1000) % 60)).padStart(2, '0')}`
 
+  const mixLabel = MIXES.find((x) => x.value === mix)!.label
+
   return (
     <div className="flex flex-col xl:flex-row xl:h-dvh">
-      {/* partitura */}
-      <section className="flex-1 min-w-0 flex flex-col xl:h-dvh">
+      {/* partitura, com os controles flutuando por cima */}
+      <section className="relative flex-1 min-w-0 flex flex-col xl:h-dvh">
         <header className="flex items-center gap-3 px-4 md:px-8 pt-6 pb-3">
           <Link to="/musicas" className="grid place-items-center size-11 -ml-2 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Voltar para Músicas">
             <ArrowLeft className="size-5" aria-hidden />
@@ -191,92 +270,180 @@ export function SongPage() {
             <h1 className="text-4xl font-black uppercase truncate">{song.title}</h1>
             <p className="text-pearl-dim truncate">{song.artist || 'Artista desconhecido'}</p>
           </div>
+          {/* metrônomo visual em destaque, fora dos controles minimizáveis */}
+          <div className="flex items-center gap-3 rounded-2xl border border-wood-700/70 bg-wood-950/60 px-4 py-2.5">
+            <BeatLights beat={beat} />
+            <span className="hidden md:block font-mono text-xs text-pearl-faint leading-tight text-right">
+              compasso
+              <br />
+              <span className="text-lg font-bold text-pearl">{bar + 1}</span>
+            </span>
+          </div>
           {song.songsterrUrl && (
             <Button variant="secondary" onClick={() => openSongsterr(song.songsterrUrl!)}>
               <ExternalLink className="size-4" aria-hidden /> Songsterr ao lado
             </Button>
           )}
         </header>
-        <div ref={scroller} className="flex-1 overflow-auto px-4 md:px-8 pb-28 xl:pb-8 min-h-[60vh]">
+        <div ref={scroller} className={`flex-1 overflow-auto px-4 md:px-8 min-h-[60vh] ${expanded ? 'pb-[28rem]' : 'pb-48 md:pb-28'}`}>
           {error && <p className="panel p-4 text-led-red">{error}</p>}
           {!score && !error && <p className="text-pearl-dim py-10 text-center">Carregando a tablatura…</p>}
           {song.origin === 'midi' && score && (
             <p className="mb-3 text-sm text-pearl-faint">
-              Tablatura convertida do MIDI: cordas e casas vêm do Songsterr, quiálteras foram aproximadas
-              {song.skippedTracks?.length ? `, e ficaram de fora: ${song.skippedTracks.join(', ')}` : ''}.
+              Tablatura convertida do MIDI. Para ficar idêntica à do Songsterr (com palm mute, harmônicos e dedilhado), importe o arquivo Guitar Pro.
             </p>
           )}
           <div ref={host} className="alphatab-host" />
         </div>
-      </section>
 
-      {/* barra lateral: transporte, faixas e teoria */}
-      <aside className="xl:w-[400px] 2xl:w-[440px] shrink-0 border-t xl:border-t-0 xl:border-l border-wood-700/70 bg-wood-950/60 xl:h-dvh xl:overflow-y-auto">
-        <div className="p-5 flex flex-col gap-5">
-          <div className="panel p-4">
-            <div className="flex items-center gap-2">
-              <Button size="lg" className="flex-1" onClick={() => apiRef.current?.playPause()} disabled={!ready}>
-                {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
-                {ready ? (playing ? 'Pausar' : 'Tocar') : 'Carregando som…'} <Kbd>espaço</Kbd>
-              </Button>
-              <Button variant="secondary" size="lg" onClick={() => apiRef.current?.stop()} aria-label="Parar e voltar ao início" title="Parar (Esc)">
-                <Square className="size-4" aria-hidden />
-              </Button>
-            </div>
-            <p className="mt-2 font-mono text-xs text-pearl-faint text-right">
-              {fmt(time.cur)} / {fmt(time.end)}
-            </p>
-
-            <label className="mt-3 block">
-              <span className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 font-semibold"><Gauge className="size-4" aria-hidden /> Velocidade</span>
-                <span className="font-mono">{Math.round(speed * 100)}% <Kbd>−</Kbd> <Kbd>+</Kbd></span>
-              </span>
-              <input type="range" min={0.25} max={1.5} step={0.05} value={speed} onChange={(e) => changeSpeed(Number(e.target.value))} className="w-full accent-[var(--color-enclosure)] mt-2" />
-            </label>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {[0.5, 0.75, 1].map((v) => (
-                <button key={v} onClick={() => changeSpeed(v)} className={`min-h-9 px-3 rounded-lg text-sm font-semibold ${speed === v ? 'bg-wood-700 text-pearl' : 'text-pearl-dim hover:bg-wood-800'}`}>
-                  {v * 100}%
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Toggle on={looping} onClick={toggleLoop} icon={<Repeat className="size-4" aria-hidden />} label="Loop" kbd="L" />
-              <Toggle on={metronome} onClick={toggleMetronome} icon={<Timer className="size-4" aria-hidden />} label="Metrônomo" kbd="M" />
-              <Toggle on={muteMine} onClick={toggleMute} icon={<VolumeX className="size-4" aria-hidden />} label="Tirar faixa" />
-            </div>
-            <p className="mt-3 text-xs text-pearl-faint">
-              Para repetir um trecho, arraste sobre os compassos na tablatura e ligue o loop. "Tirar faixa" silencia a sua parte para você tocar por cima.
-            </p>
-          </div>
-
-          {score && (
-            <div className="panel p-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <h2 className="eyebrow">Faixas</h2>
-                <Segmented<View> label="Notação" value={view} onChange={changeView} options={[{ value: 'tab', label: 'Tab' }, { value: 'both', label: 'Tab + partitura' }]} />
-              </div>
-              <ul className="grid gap-1">
-                {score.tracks.map((t) => (
-                  <li key={t.index}>
-                    <button
-                      onClick={() => selectTrack(t)}
-                      className={`w-full text-left min-h-10 px-3 rounded-lg text-sm ${track?.index === t.index ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}
-                    >
-                      {t.name || `Faixa ${t.index + 1}`}
-                      {t.isPercussion && <span className="ml-2 eyebrow">bateria</span>}
+        <div className="fixed inset-x-2 bottom-[4.75rem] z-20 md:absolute md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[min(820px,calc(100%-2rem))]">
+          {expanded && (
+            <div id="player-controls" className="mb-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-4 shadow-2xl grid gap-5 lg:grid-cols-2">
+              <div>
+                <label className="block">
+                  <span className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 font-semibold"><Gauge className="size-4" aria-hidden /> Velocidade</span>
+                    <span className="font-mono">{Math.round(speed * 100)}% <Kbd>−</Kbd> <Kbd>+</Kbd></span>
+                  </span>
+                  <input type="range" min={0.25} max={1.5} step={0.05} value={speed} onChange={(e) => changeSpeed(Number(e.target.value))} className="w-full accent-[var(--color-enclosure)] mt-2" />
+                </label>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[0.5, 0.75, 1].map((v) => (
+                    <button key={v} onClick={() => changeSpeed(v)} className={`min-h-9 px-3 rounded-lg text-sm font-semibold ${speed === v ? 'bg-wood-700 text-pearl' : 'text-pearl-dim hover:bg-wood-800'}`}>
+                      {v * 100}%
                     </button>
-                  </li>
-                ))}
-              </ul>
+                  ))}
+                </div>
+
+                <h2 className="eyebrow mt-4 mb-2">O que tocar</h2>
+                <div role="radiogroup" aria-label="O que tocar" className="grid grid-cols-2 gap-1.5">
+                  {MIXES.map((x) => (
+                    <button
+                      key={x.value}
+                      role="radio"
+                      aria-checked={mix === x.value}
+                      title={x.hint}
+                      onClick={() => changeMix(x.value)}
+                      className={`min-h-11 rounded-xl border px-3 text-sm font-semibold flex items-center justify-between gap-2 transition-colors ${
+                        mix === x.value ? 'border-enclosure/70 bg-enclosure/15 text-enclosure' : 'border-wood-700 text-pearl-dim hover:text-pearl hover:bg-wood-800'
+                      }`}
+                    >
+                      {x.label} <Kbd>{x.kbd}</Kbd>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Toggle on={looping} onClick={toggleLoop} icon={<Repeat className="size-4" aria-hidden />} label="Loop" kbd="L" />
+                  <Toggle on={metronome} onClick={toggleMetronome} icon={<Timer className="size-4" aria-hidden />} label="Metrônomo" kbd="M" />
+                  <Toggle on={muteMine} onClick={toggleMute} icon={<VolumeX className="size-4" aria-hidden />} label="Tirar faixa" kbd="T" />
+                </div>
+                <p className="mt-3 text-xs text-pearl-faint">
+                  Para praticar um trecho: arraste sobre os compassos na tablatura, ligue o loop e escolha o que tocar. "Tirar faixa" silencia a sua parte para você tocar por cima.
+                </p>
+              </div>
+
+              {score && (
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h2 className="eyebrow">Faixas</h2>
+                    <Segmented<View> label="Notação" value={view} onChange={changeView} options={[{ value: 'tab', label: 'Tab' }, { value: 'both', label: 'Tab + partitura' }]} />
+                  </div>
+                  <ul className="grid gap-1">
+                    {score.tracks.map((t) => (
+                      <li key={t.index}>
+                        <button
+                          onClick={() => selectTrack(t)}
+                          className={`w-full text-left min-h-10 px-3 rounded-lg text-sm ${track?.index === t.index ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}
+                        >
+                          {t.name || `Faixa ${t.index + 1}`}
+                          {t.isPercussion && <span className="ml-2 eyebrow">bateria</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
-          {score && <SongTheory score={score} inst={inst} />}
+          {/* barra compacta: sempre visível */}
+          <div className="flex items-center gap-2 rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-2 shadow-2xl">
+            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-28" aria-label={playing ? 'Pausar' : 'Tocar'}>
+              {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
+              <span className="hidden sm:inline">{ready ? (playing ? 'Pausar' : 'Tocar') : 'Carregando…'}</span> <Kbd>espaço</Kbd>
+            </Button>
+            <button onClick={() => apiRef.current?.stop()} className="grid place-items-center size-11 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Parar e voltar ao início" title="Parar (Esc)">
+              <Square className="size-4" aria-hidden />
+            </button>
+            <span className="hidden sm:inline px-1 font-mono text-xs text-pearl-faint">{fmt(time.cur)} / {fmt(time.end)}</span>
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => changeSpeed(speed - 0.05)} className="hidden md:grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Diminuir velocidade">−</button>
+              <span className="font-mono text-sm w-12 text-center" title="Velocidade">{Math.round(speed * 100)}%</span>
+              <button onClick={() => changeSpeed(speed + 0.05)} className="hidden md:grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Aumentar velocidade">+</button>
+              <MiniToggle on={looping} onClick={toggleLoop} label="Loop (L)" icon={<Repeat className="size-4" aria-hidden />} />
+              <MiniToggle on={metronome} onClick={toggleMetronome} label="Metrônomo (M)" icon={<Timer className="size-4" aria-hidden />} />
+              <span className="hidden lg:inline max-w-40 truncate rounded-lg bg-wood-950/70 px-2 py-1 text-xs font-semibold text-pearl-dim" title="O que tocar (1–4)">
+                {mixLabel}
+              </span>
+              <button
+                onClick={toggleExpanded}
+                aria-expanded={expanded}
+                aria-controls="player-controls"
+                className="flex items-center gap-1.5 min-h-11 rounded-xl px-2.5 text-sm font-semibold text-pearl-dim hover:text-pearl hover:bg-wood-800"
+                title={expanded ? 'Minimizar controles (C)' : 'Mais controles: faixas, o que tocar (C)'}
+              >
+                {expanded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronUp className="size-4" aria-hidden />}
+                <span className="hidden md:inline">{expanded ? 'Menos' : 'Faixas e mais'}</span> <Kbd>C</Kbd>
+              </button>
+            </div>
+          </div>
         </div>
-      </aside>
+      </section>
+
+      {/* lateral: só a teoria (os controles flutuam sobre a partitura) */}
+      {score && analysis && (
+        <aside className="xl:w-[440px] 2xl:w-[560px] shrink-0 border-t xl:border-t-0 xl:border-l border-wood-700/70 bg-wood-950/60 xl:h-dvh xl:overflow-y-auto p-5 pb-36 xl:pb-5">
+          <SongTheory analysis={analysis} score={score} track={track} bar={Math.min(bar, score.masterBars.length - 1)} onBar={goToBar} inst={inst} />
+        </aside>
+      )}
+    </div>
+  )
+}
+
+/** Botão pequeno de liga/desliga para a barra compacta. */
+function MiniToggle({ on, onClick, label, icon }: { on: boolean; onClick: () => void; label: string; icon: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      className={`grid place-items-center size-9 rounded-lg transition-colors ${on ? 'bg-enclosure/15 text-enclosure' : 'text-pearl-dim hover:text-pearl hover:bg-wood-800'}`}
+    >
+      {icon}
+    </button>
+  )
+}
+
+/** Metrônomo visual: uma luz por tempo; o tempo forte pisca maior, os tempos já tocados ficam acesos. */
+function BeatLights({ beat }: { beat: { n: number; of: number; id: number } | null }) {
+  const of = beat?.of ?? 4
+  return (
+    <div className="flex items-center gap-2.5" aria-hidden title="Metrônomo visual">
+      {Array.from({ length: Math.min(of, 12) }, (_, i) => {
+        const lit = beat !== null && i <= beat.n
+        const now = beat !== null && i === beat.n
+        const strong = i === 0
+        return (
+          <span
+            key={now ? `${i}-${beat!.id}` : i}
+            className={`rounded-full transition-colors ${strong ? 'size-7' : 'size-5'} ${
+              lit ? (strong ? 'bg-enclosure' : 'bg-pearl') : 'bg-wood-700'
+            } ${now ? (strong ? 'beat-flash-strong' : 'beat-flash') : ''}`}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -307,56 +474,4 @@ function pickTrack(score: AT.model.Score, kind: string): AT.model.Track {
   const isBassTrack = (t: AT.model.Track) => /bass|baixo/i.test(t.name) || Math.min(...(t.staves[0]?.tuning ?? [99])) < 36
   const wantBass = kind !== 'guitar6'
   return melodic.find((t) => isBassTrack(t) === wantBass) ?? melodic[0] ?? score.tracks[0]
-}
-
-function SongTheory({ score, inst }: { score: AT.model.Score; inst: ReturnType<typeof useInstrument> }) {
-  const noteName = useNoteName()
-  const leftHanded = useSettings((s) => s.leftHanded)
-  const guesses = useMemo<KeyGuess[]>(() => {
-    const notes = score.tracks.flatMap((t) => collectNotes(t))
-    return notes.length ? estimateKey(histogramOf(notes)).slice(0, 2) : []
-  }, [score])
-  const [scale, setScale] = useState<'full' | 'penta'>('penta')
-  if (!guesses.length) return null
-  const key = guesses[0]
-  const flats = prefersFlats(key.root, key.mode)
-  const pcs = scaleNotes(key.root, scale === 'penta' ? (key.mode === 'major' ? 'majorPentatonic' : 'minorPentatonic') : key.mode)
-  const markers = pcs.flatMap((pc) =>
-    findPositions(inst, pc, 12).map((p) => ({ ...p, tone: pc === key.root ? ('root' as const) : ('neutral' as const), label: intervalBetween(key.root, pc).short })),
-  )
-  const field = harmonicField(key.root, key.mode)
-  const keyLabel = (k: KeyGuess) => `${noteName(k.root, prefersFlats(k.root, k.mode))} ${k.mode === 'major' ? 'maior' : 'menor'}`
-
-  return (
-    <div className="panel p-4">
-      <h2 className="eyebrow">Teoria desta música</h2>
-      <p className="mt-2 font-display text-4xl font-black uppercase">{keyLabel(key)}</p>
-      <p className="text-sm text-pearl-dim">
-        Tom provável, calculado pelas notas da música. Segunda opção: {keyLabel(guesses[1])}.
-      </p>
-
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold">Escala no braço (graus)</span>
-        <Segmented label="Escala" value={scale} onChange={setScale} options={[{ value: 'penta', label: 'Pentatônica' }, { value: 'full', label: 'Completa' }]} />
-      </div>
-      <div className="mt-2 -mx-2 overflow-x-auto">
-        <Fretboard inst={inst} to={12} markers={markers} leftHanded={leftHanded} orientation="horizontal" />
-      </div>
-
-      <h3 className="mt-4 text-sm font-semibold">Campo harmônico</h3>
-      <div className="mt-2 grid grid-cols-4 gap-1.5">
-        {field.map((d) => (
-          <button
-            key={d.degree}
-            onClick={() => playSequence(chordNotes(d.root, d.quality).map((pc) => 52 + mod12(pc - 4)), 0.1)}
-            className="rounded-lg border border-wood-700 px-2 py-1.5 text-left hover:border-enclosure/60 hover:bg-wood-800"
-            title="Ouvir o acorde"
-          >
-            <span className="block font-mono text-[10px] text-pearl-faint">{d.roman}</span>
-            <span className="font-display text-xl font-black">{chordName(d.root, d.quality, flats)}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
 }

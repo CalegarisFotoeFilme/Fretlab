@@ -131,3 +131,22 @@
   fill: var(--color-enclosure);
   stroke: var(--color-enclosure);
 }
+
+/* Metrônomo visual do player: o tempo atual pisca; o tempo forte pisca maior e com brilho */
+.beat-flash {
+  animation: beat-flash 180ms ease-out;
+}
+.beat-flash-strong {
+  animation: beat-flash-strong 260ms ease-out;
+}
+@keyframes beat-flash {
+  from {
+    transform: scale(1.6);
+  }
+}
+@keyframes beat-flash-strong {
+  from {
+    transform: scale(2);
+    box-shadow: 0 0 14px 4px var(--color-enclosure);
+  }
+}

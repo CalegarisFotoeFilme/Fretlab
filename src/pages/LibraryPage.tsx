@@ -57,22 +57,14 @@ export function LibraryPage() {
   )
 }
 
-/** Lê o arquivo escolhido. MIDI é convertido para Guitar Pro (com cordas e casas) antes de salvar. */
+/** Lê o arquivo escolhido. O MIDI é guardado como veio e convertido em tablatura ao abrir a música. */
 async function songFromFile(file: File, onStatus?: (s: string) => void): Promise<Song> {
   if (isMidi(file)) {
-    onStatus?.('Convertendo o MIDI em tablatura…')
-    const [{ loadAlphaTab }, { midiToGuitarPro }] = await Promise.all([import('../library/alphatab'), import('../library/midiImport')])
-    const at = await loadAlphaTab()
-    const r = midiToGuitarPro(at, new Uint8Array(await file.arrayBuffer()), file.name)
-    return {
-      title: r.title,
-      artist: r.artist,
-      file: new Blob([r.bytes as BlobPart], { type: 'application/octet-stream' }),
-      fileName: `${r.title}.gp`,
-      origin: 'midi',
-      skippedTracks: r.skipped,
-      addedAt: Date.now(),
-    }
+    onStatus?.('Lendo o MIDI…')
+    const [{ loadAlphaTab }, { midiToScore }] = await Promise.all([import('../library/alphatab'), import('../library/midiImport')])
+    // converte já na importação para validar o arquivo e descobrir título e artista
+    const r = midiToScore(await loadAlphaTab(), new Uint8Array(await file.arrayBuffer()), file.name)
+    return { title: r.title, artist: r.artist, file, fileName: file.name, origin: 'midi', addedAt: Date.now() }
   }
   const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
   const origin = /\.(musicxml|xml)$/i.test(file.name) ? 'musicxml' : 'gp'
