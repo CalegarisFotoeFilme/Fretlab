@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Check, Dumbbell, Play, RotateCcw, Square, Volume2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Dumbbell, Play, RotateCcw, Square, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { audioCtx, playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
@@ -35,7 +35,7 @@ export function TrainingPage() {
   if (session) return <ReviewSession lessons={session} onExit={() => setSession(null)} />
 
   return (
-    <div className="mx-auto max-w-[1760px] min-[2200px]:max-w-[2360px] px-4 md:px-10 py-6 md:py-8">
+    <div className="mx-auto max-w-[1760px] min-[2200px]:max-w-[2360px] px-4 md:px-10 pt-6 md:pt-8 pb-40 md:pb-28">
       <PageHeader eyebrow={`Hoje: ${progress?.todayXp ?? 0} XP · ${progress?.streak ?? 0} dias seguidos`} title="Treino do dia">
         Um aquecimento técnico curto com metrônomo, à la <em>Guitar Aerobics</em>, e a revisão das lições que estão vencendo. Dez a quinze minutos por dia rendem mais que uma maratona no fim de semana.
       </PageHeader>
@@ -95,6 +95,23 @@ function DrillPanel() {
   const metro = useRef<MetronomeHandle | null>(null)
   const startedAt = useRef(0)
   const [feedback, setFeedback] = useState<string | null>(null)
+  // barra flutuante: completa ou minimizada (só metrônomo e BPM), lembrado neste navegador
+  const [compact, setCompact] = useState(() => {
+    try {
+      return localStorage.getItem('fretlab.treino.compact') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleCompact = () => {
+    const v = !compact
+    setCompact(v)
+    try {
+      localStorage.setItem('fretlab.treino.compact', v ? '1' : '0')
+    } catch {
+      // sem armazenamento local: só não lembra
+    }
+  }
   // "ouvir no andamento": notas agendadas + metrônomo próprio, para poder parar no meio
   const [listening, setListening] = useState(false)
   const preview = useRef<{ timers: number[]; metro: MetronomeHandle | null }>({ timers: [], metro: null })
@@ -169,7 +186,7 @@ function DrillPanel() {
     setFeedback(clean ? `Boa! Próxima meta: ${r.bpm} BPM. +${r.xp} XP` : `Tudo bem: a meta continua em ${r.bpm} BPM. Precisão antes de velocidade. +${r.xp} XP`)
   }
 
-  useHotkeys({ ' ': toggle, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
+  useHotkeys({ ' ': toggle, c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
 
   // número de ordem de cada posição (a primeira vez em que ela aparece); fundamentais em laranja
   const order = new Map<string, number>()
@@ -230,42 +247,7 @@ function DrillPanel() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-wood-700/70 bg-wood-950/50 p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => changeBpm(target - 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Diminuir andamento">−</button>
-            <span className="font-display text-5xl font-black w-24 text-center leading-none" aria-live="polite">{target}</span>
-            <button onClick={() => changeBpm(target + 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Aumentar andamento">+</button>
-            <span className="text-sm text-pearl-dim leading-tight">
-              BPM <Kbd>−</Kbd> <Kbd>+</Kbd>
-              <br />
-              {drill.perBeat === 4 ? '4 notas por clique' : '2 notas por clique'}
-              {saved?.best ? ` · recorde ${saved.best}` : ''}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button size="lg" onClick={toggle} className="flex-1">
-              {running ? <Square className="size-4" aria-hidden /> : <Play className="size-5" aria-hidden />} {running ? 'Parar' : 'Metrônomo'} <Kbd>espaço</Kbd>
-            </Button>
-            <div className="flex items-center gap-1.5" aria-hidden>
-              {[0, 1, 2, 3].map((i) => (
-                <span key={i} className={`rounded-full transition-colors ${i === 0 ? 'size-5' : 'size-4'} ${beat === i ? (i === 0 ? 'bg-enclosure' : 'bg-pearl') : 'bg-wood-700'}`} />
-              ))}
-            </div>
-          </div>
-          <Button variant={listening ? 'secondary' : 'ghost'} onClick={hear} aria-pressed={listening}>
-            {listening ? <Square className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />} {listening ? 'Parar o exemplo' : 'Ouvir no andamento'}
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button size="lg" className="flex-1" onClick={() => void done(true)}>
-            <Check className="size-5" aria-hidden /> Toquei limpo a {target}
-          </Button>
-          <Button variant="secondary" size="lg" onClick={() => void done(false)}>
-            Ainda não
-          </Button>
-        </div>
-        {feedback && <p className="text-sm text-pearl-dim" role="status">{feedback}</p>}
+        {saved?.best ? <p className="text-sm text-pearl-dim">Recorde limpo neste exercício: <span className="font-semibold text-pearl">{saved.best} BPM</span></p> : null}
       </div>
 
       <div className="min-w-0 flex flex-col gap-4">
@@ -292,6 +274,53 @@ function DrillPanel() {
           Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(root, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
         </p>
         <TabView inst={inst} seq={seq} perBeat={drill.perBeat} />
+      </div>
+
+      {/* controles flutuantes, como no player de tabs: sempre à mão, sem ocupar a tela */}
+      <div className="fixed inset-x-2 bottom-[4.75rem] z-20 md:inset-x-auto md:bottom-4 md:left-[calc(50%+7rem)] md:-translate-x-1/2">
+        {feedback && !compact && (
+          <p className="mb-2 rounded-xl border border-wood-700 bg-wood-900/95 px-4 py-2 text-sm text-pearl-dim shadow-2xl backdrop-blur" role="status">
+            {feedback}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-wood-700 bg-wood-900/95 p-2 shadow-2xl backdrop-blur">
+          <Button onClick={toggle} className="min-w-36">
+            {running ? <Square className="size-4" aria-hidden /> : <Play className="size-5" aria-hidden />} {running ? 'Parar' : 'Metrônomo'} <Kbd>espaço</Kbd>
+          </Button>
+          <div className="flex items-center gap-1.5 px-1" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={`rounded-full transition-colors ${i === 0 ? 'size-4' : 'size-3'} ${beat === i ? (i === 0 ? 'bg-enclosure' : 'bg-pearl') : 'bg-wood-700'}`} />
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => changeBpm(target - 2)} className="grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Diminuir andamento">−</button>
+            <span className="font-display text-3xl font-black w-16 text-center leading-none" aria-live="polite" title={`${target} BPM, ${drill.perBeat} notas por clique`}>{target}</span>
+            <button onClick={() => changeBpm(target + 2)} className="grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Aumentar andamento">+</button>
+            <span className="hidden sm:inline text-[11px] text-pearl-faint leading-tight">BPM<br />{drill.perBeat}/clique</span>
+          </div>
+          {!compact && (
+            <>
+              <Button variant={listening ? 'secondary' : 'ghost'} onClick={hear} aria-pressed={listening}>
+                {listening ? <Square className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />} {listening ? 'Parar exemplo' : 'Ouvir'}
+              </Button>
+              <Button onClick={() => void done(true)}>
+                <Check className="size-4" aria-hidden /> Toquei limpo
+              </Button>
+              <Button variant="secondary" onClick={() => void done(false)}>
+                Ainda não
+              </Button>
+            </>
+          )}
+          <button
+            onClick={toggleCompact}
+            className="flex items-center gap-1.5 min-h-10 rounded-xl px-2.5 text-sm font-semibold text-pearl-dim hover:text-pearl hover:bg-wood-800"
+            aria-expanded={!compact}
+            title={compact ? 'Mostrar todos os controles (C)' : 'Minimizar os controles (C)'}
+          >
+            {compact ? <ChevronUp className="size-4" aria-hidden /> : <ChevronDown className="size-4" aria-hidden />}
+            <Kbd>C</Kbd>
+          </button>
+        </div>
       </div>
     </section>
   )

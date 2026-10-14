@@ -13,7 +13,13 @@ export const isDesktop = () => typeof window !== 'undefined' && '__TAURI_INTERNA
 /** Abre o Songsterr na janela do app, encaixada na metade direita da tela. */
 export async function openSongsterrDesktop(url: string) {
   const { invoke } = await import('@tauri-apps/api/core')
-  await invoke('open_songsterr', { url })
+  try {
+    await invoke('open_songsterr', { url })
+  } catch (e) {
+    // sem isso, uma recusa (permissão, monitor) some em silêncio e o botão "não faz nada"
+    console.error('Não foi possível abrir o Songsterr ao lado:', e)
+    throw e
+  }
 }
 
 /** Avisa quando a janela do Songsterr termina de baixar um arquivo. Devolve a função para parar de ouvir. */

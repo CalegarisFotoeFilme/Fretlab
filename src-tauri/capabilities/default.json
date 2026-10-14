@@ -14,7 +14,9 @@
           "url": "https://www.songsterr.com/api/*"
         }
       ]
-    }
+    },
+    "allow-open-songsterr",
+    "allow-read-download"
   ],
   "remote": {
     "urls": [
