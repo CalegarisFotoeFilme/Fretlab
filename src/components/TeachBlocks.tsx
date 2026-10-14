@@ -8,6 +8,8 @@ import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { findPositions, midiAt, stringNumber } from '../theory/instrument'
 import { CHORDS, INTERVALS, SCALES, chordName, harmonicField, intervalBetween, mod12, prefersFlats } from '../theory/notes'
 import { functionOf } from '../theory/analysis'
+import { clefFor } from '../theory/staff'
+import { Staff } from './Staff'
 import { Fretboard } from './Fretboard'
 import { RhythmStaff } from './RhythmStaff'
 import { Button } from './ui'
@@ -251,6 +253,28 @@ function Block({ block }: { block: TeachBlock }) {
             ))}
           </div>
           {block.caption && <figcaption className="mt-2 text-sm text-pearl-dim">{block.caption}</figcaption>}
+        </figure>
+      )
+    }
+    case 'staff': {
+      const clef = clefFor(inst)
+      const items =
+        block.notes === 'open-strings'
+          ? inst.openMidi.map((m) => ({ midi: m, label: noteName(mod12(m)) }))
+          : (() => {
+              const { string, frets } = block.notes as { string: number; frets: number[] }
+              const s = Math.min(string, inst.openMidi.length - 1)
+              return frets.map((f) => ({ midi: inst.openMidi[s] + f, label: noteName(mod12(inst.openMidi[s] + f)) }))
+            })()
+      return (
+        <figure className="panel p-3">
+          <Staff items={items} clef={clef} />
+          <figcaption className="mt-2 flex items-center justify-between gap-3 px-1 text-sm text-pearl-dim">
+            {block.caption}
+            <Button variant="secondary" onClick={() => playSequence(items.map((i) => i.midi), 0.45)}>
+              <Volume2 className="size-4" aria-hidden /> Ouvir
+            </Button>
+          </figcaption>
         </figure>
       )
     }

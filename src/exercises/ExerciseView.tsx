@@ -7,6 +7,7 @@ import { NameNote } from './NameNote'
 import { NoteSet } from './NoteSet'
 import { PlayInterval } from './PlayInterval'
 import { Quiz } from './Quiz'
+import { ReadNote } from './ReadNote'
 import { Rhythm } from './Rhythm'
 import { RhythmDictation } from './RhythmDictation'
 import { TheoryQuiz } from './TheoryQuiz'
@@ -39,5 +40,7 @@ export function ExerciseView({ spec, round, onRoundDone }: { spec: ExerciseSpec;
       return <TheoryQuiz spec={spec} {...props} />
     case 'rhythm-dictation':
       return <RhythmDictation spec={spec} {...props} />
+    case 'read-note':
+      return <ReadNote spec={spec} {...props} />
   }
 }

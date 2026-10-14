@@ -158,6 +158,9 @@ describe('currículo', () => {
       if (ex.type === 'play-interval' || ex.type === 'name-interval') {
         for (const inst of instruments) expect(() => intervalRound(inst, ex.intervals, ex.strings, ex.frets), `${l.id} (${inst.kind})`).not.toThrow()
       }
+      if (ex.type === 'read-note') {
+        for (const inst of instruments) expect(() => nameNoteRound(inst, ex.pool, ex.strings, ex.frets, 4), `${l.id} (${inst.kind})`).not.toThrow()
+      }
       if (ex.type === 'find-note' || ex.type === 'name-note') {
         for (const inst of instruments) {
           expect(() =>

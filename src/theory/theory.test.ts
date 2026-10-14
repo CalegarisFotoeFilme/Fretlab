@@ -78,3 +78,20 @@ describe('tonalidade', () => {
     expect(estimateKey(am)[0]).toMatchObject({ root: 9, mode: 'minor' })
   })
 })
+
+describe('pauta', () => {
+  it('posiciona as cordas soltas como na escrita padrão', async () => {
+    const { staffNote, ledgerSteps } = await import('./staff')
+    // guitarra (clave de sol 8vb): Mi grave = 3 linhas suplementares abaixo; Mi agudo = 4º espaço
+    expect(staffNote(40, 'treble').step).toBe(-11)
+    expect(ledgerSteps(-11)).toEqual([-6, -8, -10])
+    expect(staffNote(64, 'treble').step).toBe(3)
+    // baixo (clave de fá 8vb): Mi grave = 1 linha suplementar abaixo; Sol solto = último espaço (G3 escrito)
+    expect(staffNote(28, 'bass').step).toBe(-6)
+    expect(ledgerSteps(-6)).toEqual([-6])
+    expect(staffNote(43, 'bass')).toMatchObject({ step: 3, accidental: null, name: 'G' })
+    // acidentes
+    expect(staffNote(42, 'treble')).toMatchObject({ accidental: 'sharp', name: 'F#' })
+    expect(staffNote(42, 'treble', true)).toMatchObject({ accidental: 'flat', name: 'Gb' })
+  })
+})

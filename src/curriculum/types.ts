@@ -123,6 +123,15 @@ export interface RhythmDictationSpec {
   patterns: string[]
 }
 
+/** Ler uma nota na pauta (clave do instrumento) e responder pelo nome, no braço ou tocando. */
+export interface ReadNoteSpec {
+  type: 'read-note'
+  answer: 'name' | 'fretboard' | 'play'
+  pool: NotePool
+  strings: StringSel
+  frets: FretRange
+}
+
 export type TheoryAsk = 'chord-of-degree' | 'degree-of-chord' | 'function' | 'relative' | 'spell-chord' | 'scale-notes' | 'progression'
 
 /** Perguntas de teoria geradas a cada rodada (tons e acordes sorteados). */
@@ -148,6 +157,7 @@ export type ExerciseSpec =
   | HearDegreeSpec
   | TheoryQuizSpec
   | RhythmDictationSpec
+  | ReadNoteSpec
 
 export type TeachBlock =
   | { kind: 'text'; text: string }
@@ -164,6 +174,8 @@ export type TeachBlock =
   | { kind: 'map'; set: NoteSetSource; root: PitchClass; from?: number; to?: number; anchor?: ShapeAnchor; caption: string }
   /** campo harmônico de um tom, com funções e som */
   | { kind: 'field'; root: PitchClass; mode: 'major' | 'minor'; sevenths?: boolean; caption?: string }
+  /** notas na pauta, na clave do instrumento: as cordas soltas ou as notas naturais de uma corda */
+  | { kind: 'staff'; notes: 'open-strings' | { string: number; frets: number[] }; caption: string }
 
 export interface Lesson {
   id: string
