@@ -14,8 +14,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "desktop": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri dev",
+    "desktop:build": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri build"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",
