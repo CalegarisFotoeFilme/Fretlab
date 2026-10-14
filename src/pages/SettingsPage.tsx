@@ -1,7 +1,9 @@
-import { Download, RefreshCw, Upload } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Download, Music, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { listInputDevices, type InputDevice } from '../audio/engine'
 import { Button, PageHeader, Segmented } from '../components/ui'
+import { db } from '../progress/db'
 import { exportProgress, importProgress } from '../progress/progress'
 import { useSettings, type NoteNaming } from '../progress/settings'
 import { INSTRUMENT_LABEL, TUNINGS, type InstrumentKind } from '../theory/instrument'
@@ -10,6 +12,20 @@ export function SettingsPage() {
   const s = useSettings()
   const [devices, setDevices] = useState<InputDevice[]>([])
   const [msg, setMsg] = useState<string | null>(null)
+  const soundFont = useLiveQuery(() => db.assets.get('soundfont'))
+  const [sfMsg, setSfMsg] = useState<string | null>(null)
+
+  /** Confere o cabeçalho RIFF/sfbk antes de guardar (um arquivo errado deixaria o player mudo). */
+  const loadSoundFont = async (file: File) => {
+    const head = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+    const tag = (a: number, b: number) => String.fromCharCode(...head.slice(a, b))
+    if (tag(0, 4) !== 'RIFF' || tag(8, 12) !== 'sfbk') {
+      setSfMsg('Esse arquivo não é um SoundFont (.sf2/.sf3).')
+      return
+    }
+    await db.assets.put({ id: 'soundfont', name: file.name, data: file, addedAt: Date.now() })
+    setSfMsg(`Pronto: ${file.name} será usado nas músicas (reabra a música, se estiver aberta).`)
+  }
 
   const refreshDevices = async (ask = false) => {
     try {
@@ -90,12 +106,49 @@ export function SettingsPage() {
           </div>
         </Field>
 
+        <Field label="Plugins e pedaleiras (Neural DSP, Zoom, Pocket Master)">
+          <p className="text-sm text-pearl/90">
+            Pode tocar com os seus plugins abertos: no macOS a entrada de áudio é compartilhada, e o FretLab ouve o sinal que a pedaleira manda pelo USB ao mesmo tempo que o plugin (ele não ouve a saída do plugin).
+          </p>
+          <p className="mt-2 text-sm text-pearl-faint">
+            Para os exercícios, um patch limpo ou com pouco ganho detecta melhor: distorção e delay embaralham a altura da nota. Se a pedaleira manda estéreo, tanto faz o lado.
+          </p>
+        </Field>
+
         <Field label={`Sensibilidade: ${Math.round((0.05 - s.sensitivity) / 0.0005)}%`} hint="Aumente se as notas não forem detectadas. Diminua se ruído virar nota.">
           <input type="range" min={0.002} max={0.05} step={0.001} value={0.052 - s.sensitivity} onChange={(e) => s.set({ sensitivity: 0.052 - Number(e.target.value) })} className="w-full accent-[var(--color-enclosure)]" aria-label="Sensibilidade" />
         </Field>
 
         <Field label={`Compensação de atraso: ${s.latencyMs} ms`} hint="Se nos exercícios de ritmo seus acertos aparecem sempre atrasados, aumente até ficarem no centro.">
           <input type="range" min={0} max={250} step={5} value={s.latencyMs} onChange={(e) => s.set({ latencyMs: Number(e.target.value) })} className="w-full accent-[var(--color-enclosure)]" aria-label="Compensação de atraso" />
+        </Field>
+
+        <Field
+          label="Timbres do player (SoundFont)"
+          hint="O padrão (Sonivox, 1,3 MB) é leve, mas simples. Um SoundFont maior soa bem mais real: o GeneralUser GS (gratuito, ~30 MB) é uma ótima escolha. Fica guardado só neste navegador/app."
+        >
+          <p className="flex items-center gap-2 text-sm">
+            <Music className="size-4 text-pearl-dim" aria-hidden />
+            {soundFont ? (
+              <span>
+                <span className="font-semibold">{soundFont.name}</span> <span className="text-pearl-faint">({(soundFont.data.size / 1048576).toFixed(1)} MB)</span>
+              </span>
+            ) : (
+              <span className="text-pearl-dim">Padrão (Sonivox)</span>
+            )}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-wood-800 border border-wood-600/60 font-semibold cursor-pointer hover:bg-wood-700">
+              <Upload className="size-4" aria-hidden /> Carregar .sf2 / .sf3
+              <input type="file" accept=".sf2,.sf3" className="sr-only" onChange={(e) => e.target.files?.[0] && void loadSoundFont(e.target.files[0])} />
+            </label>
+            {soundFont && (
+              <Button variant="ghost" onClick={() => void db.assets.delete('soundfont').then(() => setSfMsg('Voltou ao SoundFont padrão.'))}>
+                <Trash2 className="size-4" aria-hidden /> Voltar ao padrão
+              </Button>
+            )}
+          </div>
+          {sfMsg && <p role="status" className="mt-2 text-sm text-pearl-dim">{sfMsg}</p>}
         </Field>
 
         <Field label="Backup do progresso" hint="O progresso fica salvo só neste navegador. Exporte para levar a outro aparelho.">

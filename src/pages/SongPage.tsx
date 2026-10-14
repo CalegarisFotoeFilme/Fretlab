@@ -7,7 +7,7 @@ import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
-import { alphaTabPaths, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
+import { alphaTabPaths, applySoundFont, customSoundFont, loadAlphaTab, openSongsterr } from '../library/alphatab'
 import { isDesktop } from '../library/desktop'
 import { analyzeSong } from '../library/songAnalysis'
 import { syncAvailable, videoLabel } from '../library/songsterrSync'
@@ -114,11 +114,14 @@ export function SongPage() {
         const at = await loadAlphaTab()
         if (disposed || !host.current) return
         const paths = alphaTabPaths()
+        const hasCustomSf = !!(await customSoundFont())
+        if (disposed || !host.current) return
         instance = new at.AlphaTabApi(host.current, {
           core: { fontDirectory: paths.fonts, scriptFile: paths.script },
           player: {
             playerMode: at.PlayerMode.EnabledSynthesizer,
-            soundFont: paths.soundFont,
+            // com SoundFont próprio, o padrão nem é baixado (applySoundFont entrega os bytes)
+            soundFont: hasCustomSf ? null : paths.soundFont,
             scrollElement: scroller.current ?? undefined,
             enableUserInteraction: true,
           },
@@ -196,7 +199,7 @@ export function SongPage() {
             setTime({ cur: e.currentTime, end: e.endTime })
           }
         })
-        if (!paths.soundFont) void loadSoundFontBase64(inst).catch(() => setError('Não foi possível carregar os timbres do player.'))
+        if (hasCustomSf || !paths.soundFont) void applySoundFont(inst).catch(() => setError('Não foi possível carregar os timbres do player.'))
         const bytes = new Uint8Array(await file.arrayBuffer())
         const name = songRef.current?.fileName ?? ''
         if (/\.midi?$/i.test(name)) {

@@ -86,29 +86,17 @@
 
 ## Próximos passos (prioridade)
 
-> **Retome por aqui.** Última sessão: 2026-10-14, último commit `b81973f`. O app para Mac foi recompilado nesse commit (`src-tauri/target/release/bundle/macos/FretLab.app`). Tudo está commitado e publicado; as checagens passam (52 testes).
+> **Retome por aqui.** Última sessão: 2026-10-14. Veja o último commit com `git log -1`. O app para Mac foi recompilado nesse commit (`src-tauri/target/release/bundle/macos/FretLab.app`). Tudo está commitado e publicado; as checagens passam (52 testes).
 
-### A. Pedidos do usuário ainda não feitos (nesta ordem)
+### A. Pedidos do usuário: todos feitos
 
-1. **Treino do Dia: controles flutuantes.** Transformar os controles do aquecimento num painel flutuante e minimizável, igual ao player de tabs (`SongPage`: barra compacta + painel expansível, tecla C, estado no `localStorage`). Na barra compacta:
-   - metrônomo e BPM −/+;
-   - "Ouvir no andamento";
-   - "Toquei limpo" e "Ainda não".
-   O braço, a tablatura e o "por que" ficam livres na tela.
-2. **Volume no player com sintetizador:**
-   - volume geral: `api.masterVolume`;
-   - volume por faixa: `api.changeTrackVolume([track], v)`, com um slider por faixa na lista "Faixas" do painel expandido;
-   - guardar os volumes por música (Dexie, campo novo em `Song`) ou na sessão.
-   No modo gravação (YouTube), o volume geral vai para `handler.masterVolume`.
-3. **Botão "Dica" (tecla H) em todos os exercícios e no Treino**, como um professor:
-   - dicas progressivas: a primeira só orienta, a segunda quase entrega a resposta;
-   - exemplos: achar nota → corda solta + quantas casas contar; intervalo → a forma ("corda de cima, 2 casas à frente"); desenhe no braço → próximo grau e onde ele cai; ouvido → característica do som; leitura → linha/espaço de referência;
-   - sugestão: a rodada com dica vale no máximo 0,75.
-   Implementar um componente `Hint` usado em cada exercício de `src/exercises/`.
-4. **SoundFont melhor** para o sintetizador (o atual `sonivox.sf2`, de 1,3 MB, soa fraco):
-   - em Ajustes, "Carregar SoundFont (.sf2/.sf3)", com o arquivo guardado no IndexedDB e passado ao alphaTab via `api.loadSoundFont(bytes)`;
-   - sugerir o GeneralUser GS (gratuito) e perguntar antes de baixar qualquer arquivo para o usuário.
-5. **Dica de entrada de áudio em Ajustes:** explicar que plugins (Neural DSP) e pedaleiras USB (Zoom G3X, Sonicake Pocket Master) **não impedem** o FretLab de ouvir. O macOS compartilha a entrada entre apps, e o FretLab lê o sinal que a pedaleira manda pelo USB, não a saída do plugin. Para a detecção, um patch limpo ou com pouco ganho funciona melhor.
+- **Treino do Dia:** controles flutuantes no rodapé, minimizáveis com `C`.
+- **Player:** volume geral e por faixa, salvos por música (`Song.mix`).
+- **Dica:** botão "Dica" (`H`) em todos os exercícios e no Treino. Os textos ficam em `src/exercises/hints.ts`. A rodada com dica vale no máximo 75%; o `ExerciseView` aplica o teto via `HintContext`.
+- **SoundFont:** dá para carregar um SoundFont próprio em Ajustes (tabela `assets`, `applySoundFont`). Ele também é reaplicado ao voltar do modo YouTube.
+- **Ajustes:** cartão explicando que plugins e pedaleiras USB não impedem a detecção.
+- **Vídeo do YouTube:** pode ficar oculto (tecla `V`).
+- **Conserto:** "Abrir o Songsterr" no app (comandos declarados no `build.rs` e liberados na capability). Verificado com um autoteste: a janela abre na metade direita e o site carrega.
 
 ### B. Validar com o usuário (precisa do Mac e da pedaleira)
 

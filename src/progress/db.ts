@@ -43,11 +43,20 @@ export interface DrillProgress {
   lastDay: string
 }
 
+/** Arquivos grandes do usuário (ex.: o SoundFont do player). Fora do backup JSON. */
+export interface Asset {
+  id: 'soundfont'
+  name: string
+  data: Blob
+  addedAt: number
+}
+
 export const db = new Dexie('fretlab') as Dexie & {
   lessons: EntityTable<LessonProgress, 'lessonId'>
   days: EntityTable<PracticeDay, 'day'>
   songs: EntityTable<Song, 'id'>
   drills: EntityTable<DrillProgress, 'id'>
+  assets: EntityTable<Asset, 'id'>
 }
 
 db.version(1).stores({
@@ -57,3 +66,5 @@ db.version(1).stores({
 })
 // v2: andamentos do Treino do Dia
 db.version(2).stores({ drills: 'id' })
+// v3: SoundFont do usuário
+db.version(3).stores({ assets: 'id' })

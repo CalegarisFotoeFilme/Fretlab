@@ -42,6 +42,22 @@ export function alphaTabPaths() {
   }
 }
 
+/** O usuário carregou um SoundFont próprio (Ajustes)? */
+export async function customSoundFont() {
+  const { db } = await import('../progress/db')
+  return db.assets.get('soundfont')
+}
+
+/**
+ * Timbres do player quando o caminho padrão não serve: o SoundFont do usuário (Ajustes) ou, na
+ * versão do claude.ai, o padrão em base64. Chamar ao criar o player e ao recriá-lo (volta do YouTube).
+ */
+export async function applySoundFont(api: AT.AlphaTabApi) {
+  const custom = await customSoundFont()
+  if (custom) api.loadSoundFont(new Uint8Array(await custom.data.arrayBuffer()), false)
+  else if (import.meta.env.MODE === 'artifact') await loadSoundFontBase64(api)
+}
+
 /** Versão publicada no claude.ai: busca o soundfont em base64 e entrega os bytes ao alphaTab. */
 export async function loadSoundFontBase64(api: AT.AlphaTabApi) {
   const text = await (await fetch(vendorUrl('soundfont/sonivox.sf2.b64.txt'))).text()

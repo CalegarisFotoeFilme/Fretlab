@@ -1,5 +1,6 @@
 import type * as AT from '@coderline/alphatab'
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { applySoundFont } from './alphatab'
 import { fetchSongsterrSync, loadYouTube, toFlatSyncPoints, type SongsterrSync, type SyncVideo, type YTPlayer } from './songsterrSync'
 
 export type OriginalAudioState =
@@ -168,6 +169,8 @@ export function useOriginalAudio(apiRef: RefObject<AT.AlphaTabApi | null>, video
     if (api && at && api.settings.player.playerMode !== at.PlayerMode.EnabledSynthesizer) {
       api.settings.player.playerMode = at.PlayerMode.EnabledSynthesizer
       api.updateSettings()
+      // o sintetizador foi recriado: sem caminho padrão (SoundFont próprio ou claude.ai), entrega os timbres de novo
+      if (!api.settings.player.soundFont) await applySoundFont(api)
       await reloadMidi(api)
     }
     if (reset) setState({ status: 'off' })
