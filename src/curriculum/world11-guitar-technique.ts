@@ -106,6 +106,18 @@ export const world11: World = {
       rounds: 5,
     },
     {
+      id: 'w11-bend-afinado',
+      title: 'Bend afinado',
+      summary: 'O app ouve se o bend chegou na nota.',
+      teach: [
+        { kind: 'text', text: 'Hora de conferir o bend de verdade. O app marca uma nota e pede um intervalo acima dela: 2ª menor (½ tom) ou 2ª maior (1 tom). Em vez de tocar a nota-alvo presa, prenda a nota marcada e faça o bend até ela soar como o alvo. O app só aceita quando a altura chega lá.' },
+        { kind: 'interval', semitones: 2, string: 3, caption: 'O alvo de um bend de 1 tom: 2 casas acima, na mesma corda.' },
+        { kind: 'tip', text: 'Toque a nota-alvo presa uma vez antes ("Ouvir" ajuda), depois faça o bend devagar, subindo até casar com o que você ouviu. Segure no alvo por um instante.' },
+      ],
+      exercise: { type: 'play-interval', input: 'play', intervals: [1, 2], strings: [3, 4, 5], frets: { from: 5, to: 12 } },
+      rounds: 6,
+    },
+    {
       id: 'w11-sweep',
       title: 'Sweep picking',
       summary: 'Arpejos numa varrida só.',

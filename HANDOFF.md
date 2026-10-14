@@ -119,7 +119,8 @@
 - `World.instrument` + `worldsFor(kind)`; a trilha e a "próxima lição" usam só os mundos do instrumento configurado. Teste em `generate.test.ts`.
 - Treino do Dia: drills de técnica com `instrument` (`slap`, `walking` no baixo; `legato`, `sweep` na guitarra), `drillsFor(kind)`; o exercício do dia sorteia só entre os do instrumento.
 - Service worker: registrado à mão em `main.tsx` (`injectRegister: false`) e só no navegador; no app para Mac ele é removido (e o cache apagado), então uma build nova aparece já na primeira abertura.
-- Falta: símbolos de técnica (T/P, x) na notação; bend conferido pelo detector de altura (exercício tocado, com nota-alvo).
+- Lição `w11-bend-afinado`: bend conferido pelo detector (reusa `play-interval` com ½ e 1 tom, input play).
+- Falta: símbolos de técnica (T/P, x) na notação (RhythmStaff/TabView).
 
 ### C0. Planejamento original (referência)
 
