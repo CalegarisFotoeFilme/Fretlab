@@ -7,7 +7,7 @@ import { playSequence } from '../audio/engine'
 import { Fretboard } from '../components/Fretboard'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
-import { alphaTabPaths, collectNotes, loadAlphaTab, openSongsterr } from '../library/alphatab'
+import { alphaTabPaths, collectNotes, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
 import { db } from '../progress/db'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { findPositions } from '../theory/instrument'
@@ -97,6 +97,7 @@ export function SongPage() {
             setTime({ cur: e.currentTime, end: e.endTime })
           }
         })
+        if (!paths.soundFont) void loadSoundFontBase64(inst).catch(() => setError('Não foi possível carregar os timbres do player.'))
         inst.load(new Uint8Array(await file.arrayBuffer()))
         void db.songs.update(Number(id), { lastOpenedAt: Date.now() })
       } catch (e) {

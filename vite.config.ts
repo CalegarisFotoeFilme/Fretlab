@@ -3,10 +3,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+// `vite build --mode artifact`: versão para abrir como página do claude.ai
+// (caminhos relativos e sem service worker, que lá não é permitido).
+export default defineConfig(({ mode }) => ({
+  base: mode === 'artifact' ? './' : '/',
+  build: mode === 'artifact' ? { outDir: 'dist-artifact' } : undefined,
   plugins: [
     react(),
     tailwindcss(),
+    mode !== 'artifact' &&
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
@@ -30,4 +35,4 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
   },
-})
+}))

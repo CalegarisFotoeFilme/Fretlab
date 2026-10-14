@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router'
+import { createBrowserRouter, createMemoryRouter, RouterProvider } from 'react-router'
 import './design/tokens.css'
 import { AppShell } from './components/AppShell'
 import { TrailPage } from './pages/TrailPage'
@@ -11,7 +11,9 @@ import { LibraryPage } from './pages/LibraryPage'
 import { SongPage } from './pages/SongPage'
 import { SettingsPage } from './pages/SettingsPage'
 
-const router = createBrowserRouter([
+// Na página do claude.ai a URL não pode mudar: as rotas ficam em memória.
+const createRouter = import.meta.env.MODE === 'artifact' ? createMemoryRouter : createBrowserRouter
+const router = createRouter([
   {
     element: <AppShell />,
     children: [

@@ -80,8 +80,11 @@ async function songFromFile(file: File, onStatus?: (s: string) => void): Promise
 }
 
 function SongCard({ song }: { song: Song }) {
+  // confirmação na própria página (diálogos do navegador nem sempre aparecem)
+  const [confirming, setConfirming] = useState(false)
   const remove = () => {
-    if (confirm(`Remover "${song.title}" da biblioteca?`)) void db.songs.delete(song.id!)
+    if (confirming) void db.songs.delete(song.id!)
+    else setConfirming(true)
   }
   return (
     <li className="panel p-4 flex flex-col gap-3 hover:border-wood-600 transition-colors">
@@ -95,9 +98,20 @@ function SongCard({ song }: { song: Song }) {
             {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
           </div>
         </div>
-        <Button variant="ghost" className="min-w-11 px-2" onClick={remove} aria-label={`Remover ${song.title}`} title="Remover">
-          <Trash2 className="size-4" aria-hidden />
-        </Button>
+        {confirming ? (
+          <span className="flex items-center gap-1">
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              Manter
+            </Button>
+            <Button variant="secondary" className="text-led-red" onClick={remove}>
+              Remover
+            </Button>
+          </span>
+        ) : (
+          <Button variant="ghost" className="min-w-11 px-2" onClick={remove} aria-label={`Remover ${song.title}`} title="Remover">
+            <Trash2 className="size-4" aria-hidden />
+          </Button>
+        )}
       </div>
       <div className="flex flex-wrap gap-2 mt-auto">
         {song.file && (

@@ -2,7 +2,9 @@ import type * as AT from '@coderline/alphatab'
 
 // O alphaTab é carregado pelo build UMD em /vendor (copiado no postinstall), assim fontes,
 // soundfont e o worker são encontrados pelo mesmo caminho do script.
-const BASE = '/vendor/alphatab/'
+// relativo ao documento: funciona tanto na raiz do site quanto publicado numa subpasta
+const BASE = 'vendor/alphatab/'
+const vendorUrl = (p: string) => new URL(BASE + p, document.baseURI).href
 
 declare global {
   interface Window {
@@ -16,7 +18,7 @@ export function loadAlphaTab(): Promise<typeof AT> {
   if (window.alphaTab) return Promise.resolve(window.alphaTab)
   loading ??= new Promise((resolve, reject) => {
     const s = document.createElement('script')
-    s.src = `${BASE}alphaTab.min.js`
+    s.src = vendorUrl('alphaTab.min.js')
     s.async = true
     s.onload = () => (window.alphaTab ? resolve(window.alphaTab) : reject(new Error('alphaTab não carregou')))
     s.onerror = () => {
@@ -30,8 +32,21 @@ export function loadAlphaTab(): Promise<typeof AT> {
 
 /** URLs absolutas: o worker do alphaTab roda a partir de um blob e não resolve caminhos relativos. */
 export function alphaTabPaths() {
-  const abs = (p: string) => new URL(BASE + p, window.location.origin).href
-  return { script: abs('alphaTab.min.js'), fonts: abs('font/'), soundFont: abs('soundfont/sonivox.sf2') }
+  return {
+    script: vendorUrl('alphaTab.min.js'),
+    fonts: vendorUrl('font/'),
+    // a página do claude.ai não serve .sf2: lá o soundfont vai como texto base64 (ver loadSoundFontBase64)
+    soundFont: import.meta.env.MODE === 'artifact' ? null : vendorUrl('soundfont/sonivox.sf2'),
+  }
+}
+
+/** Versão publicada no claude.ai: busca o soundfont em base64 e entrega os bytes ao alphaTab. */
+export async function loadSoundFontBase64(api: AT.AlphaTabApi) {
+  const text = await (await fetch(vendorUrl('soundfont/sonivox.sf2.b64.txt'))).text()
+  const bin = atob(text.trim())
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  api.loadSoundFont(bytes, false)
 }
 
 export interface ScoreNote {
@@ -75,5 +90,12 @@ export function parseSongsterrUrl(url: string): { title: string; artist: string 
 export function openSongsterr(url: string) {
   const w = Math.round(window.screen.availWidth / 2)
   const h = window.screen.availHeight
-  window.open(url, 'fretlab-songsterr', `popup,width=${w},height=${h},left=${w},top=0`)
+  const win = window.open(url, 'fretlab-songsterr', `popup,width=${w},height=${h},left=${w},top=0`)
+  if (!win) {
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noopener'
+    a.click()
+  }
 }
