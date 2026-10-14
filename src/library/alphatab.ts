@@ -1,4 +1,5 @@
 import type * as AT from '@coderline/alphatab'
+import { isDesktop, openSongsterrDesktop } from './desktop'
 
 // O alphaTab é carregado pelo build UMD em /vendor (copiado no postinstall), assim fontes,
 // soundfont e o worker são encontrados pelo mesmo caminho do script.
@@ -87,8 +88,12 @@ export function parseSongsterrUrl(url: string): { title: string; artist: string 
   }
 }
 
-/** Abre o Songsterr numa janela ao lado (metade direita da tela). */
+/** Abre o Songsterr numa janela ao lado (metade direita da tela). No app para Mac, numa janela do próprio app. */
 export function openSongsterr(url: string) {
+  if (isDesktop()) {
+    void openSongsterrDesktop(url)
+    return
+  }
   const w = Math.round(window.screen.availWidth / 2)
   const h = window.screen.availHeight
   const win = window.open(url, 'fretlab-songsterr', `popup,width=${w},height=${h},left=${w},top=0`)

@@ -1,5 +1,41 @@
 import { Dumbbell, Gauge, Guitar, ListMusic, Route, SlidersHorizontal } from 'lucide-react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { isDesktop, onSongsterrDownload, readDownload } from '../library/desktop'
+import { isSongFile, songFromFile } from '../library/importSong'
+import { db } from '../progress/db'
+
+/**
+ * App para Mac: o que a janela do Songsterr baixar (Guitar Pro/MIDI) entra na biblioteca e abre.
+ * A página do Songsterr em que o download aconteceu fica ligada à música.
+ */
+function useSongsterrImports() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!isDesktop()) return
+    let stop: (() => void) | undefined
+    let alive = true
+    void onSongsterrDownload(async (d) => {
+      if (!isSongFile(d.name)) return
+      try {
+        const bytes = await readDownload(d.path)
+        const song = await songFromFile(new File([bytes as BlobPart], d.name))
+        const page = d.pageUrl && /songsterr\.com\/a\//.test(d.pageUrl) ? d.pageUrl : undefined
+        const id = await db.songs.add({ ...song, songsterrUrl: page })
+        navigate(`/musicas/${id}`)
+      } catch (e) {
+        console.error('Não foi possível importar o download do Songsterr', e)
+      }
+    }).then((un) => {
+      if (alive) stop = un
+      else un()
+    })
+    return () => {
+      alive = false
+      stop?.()
+    }
+  }, [navigate])
+}
 
 const NAV = [
   { to: '/', label: 'Trilha', icon: Route },
@@ -12,6 +48,7 @@ const NAV = [
 
 export function AppShell() {
   const { pathname } = useLocation()
+  useSongsterrImports()
   const immersive = pathname.startsWith('/licao/')
   return (
     <div className="min-h-dvh md:flex">

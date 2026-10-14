@@ -13,10 +13,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",
+    "@tauri-apps/api": "^2.12.3",
     "@tonejs/midi": "^2.0.28",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
@@ -31,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.12.2",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

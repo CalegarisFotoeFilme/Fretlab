@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, PageHeader } from '../components/ui'
 import { openSongsterr, parseSongsterrUrl } from '../library/alphatab'
+import { isDesktop } from '../library/desktop'
+import { GP_ACCEPT, songFromFile } from '../library/importSong'
 import { db, type Song } from '../progress/db'
 
-const GP_ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.musicxml,.xml,.mid,.midi'
-const isMidi = (f: File) => /\.midi?$/i.test(f.name)
 
 export function LibraryPage() {
   const songs = useLiveQuery(() => db.songs.orderBy('addedAt').reverse().toArray())
@@ -39,7 +39,17 @@ export function LibraryPage() {
         <Button variant="secondary" onClick={() => setAdding(true)}>
           <Link2 className="size-4" aria-hidden /> Adicionar link do Songsterr
         </Button>
+        {isDesktop() && (
+          <Button variant="secondary" onClick={() => openSongsterr('https://www.songsterr.com/')}>
+            <ExternalLink className="size-4" aria-hidden /> Abrir o Songsterr ao lado
+          </Button>
+        )}
       </div>
+      {isDesktop() && (
+        <p className="-mt-5 mb-8 text-sm text-pearl-faint">
+          No app para Mac, o que você baixar (Guitar Pro ou MIDI) na janela do Songsterr entra sozinho aqui na biblioteca e abre na hora.
+        </p>
+      )}
 
       {status && (
         <p role="status" className="panel p-3 mb-6 text-pearl-dim">
@@ -55,20 +65,6 @@ export function LibraryPage() {
       </ul>
     </div>
   )
-}
-
-/** Lê o arquivo escolhido. O MIDI é guardado como veio e convertido em tablatura ao abrir a música. */
-async function songFromFile(file: File, onStatus?: (s: string) => void): Promise<Song> {
-  if (isMidi(file)) {
-    onStatus?.('Lendo o MIDI…')
-    const [{ loadAlphaTab }, { midiToScore }] = await Promise.all([import('../library/alphatab'), import('../library/midiImport')])
-    // converte já na importação para validar o arquivo e descobrir título e artista
-    const r = midiToScore(await loadAlphaTab(), new Uint8Array(await file.arrayBuffer()), file.name)
-    return { title: r.title, artist: r.artist, file, fileName: file.name, origin: 'midi', addedAt: Date.now() }
-  }
-  const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
-  const origin = /\.(musicxml|xml)$/i.test(file.name) ? 'musicxml' : 'gp'
-  return { title, artist: '', file, fileName: file.name, origin, addedAt: Date.now() }
 }
 
 function SongCard({ song }: { song: Song }) {
