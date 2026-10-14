@@ -111,7 +111,7 @@ export function Fretboard({
     <div ref={wrap} className={className}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        style={vertical ? { width: '100%', maxWidth: 380, margin: '0 auto', height: 'auto', display: 'block' } : { width: '100%', minWidth: 560, height: 'auto', display: 'block' }}
+        style={vertical ? { width: '100%', maxWidth: 380, margin: '0 auto', height: 'auto', display: 'block' } : { width: '100%', minWidth: 560, maxWidth: width * 1.6, margin: '0 auto', height: 'auto', display: 'block' }}
         role={onPick ? 'group' : 'img'}
         aria-label={ariaLabel ?? `Braço: casas ${from} a ${to}`}
       >

@@ -35,11 +35,11 @@ export function TrainingPage() {
   if (session) return <ReviewSession lessons={session} onExit={() => setSession(null)} />
 
   return (
-    <div className="mx-auto max-w-[1760px] px-4 md:px-10 py-6 md:py-8">
+    <div className="mx-auto max-w-[1760px] min-[2200px]:max-w-[2360px] px-4 md:px-10 py-6 md:py-8">
       <PageHeader eyebrow={`Hoje: ${progress?.todayXp ?? 0} XP · ${progress?.streak ?? 0} dias seguidos`} title="Treino do dia">
         Um aquecimento técnico curto com metrônomo, à la <em>Guitar Aerobics</em>, e a revisão das lições que estão vencendo. Dez a quinze minutos por dia rendem mais que uma maratona no fim de semana.
       </PageHeader>
-      <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_480px]">
+      <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px] items-start">
         <DrillPanel />
         <section className="panel p-5 self-start">
           <h2 className="eyebrow">Revisão espaçada</h2>
@@ -156,63 +156,69 @@ function DrillPanel() {
   const keyLabel = drill.id === 'aranha' ? 'casas 1 a 5' : `tom de ${noteName(root, flats)}`
 
   return (
-    <section className="panel p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    // ultrawide: controles à esquerda, braço e tablatura à direita, tudo sem rolar
+    <section className="panel p-5 grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)] xl:gap-8">
+      <div className="flex flex-col gap-4 min-w-0">
         <div>
           <h2 className="eyebrow flex items-center gap-2">
             <Dumbbell className="size-4" aria-hidden /> Aquecimento {drill.id === today.id && <span className="text-enclosure">· exercício do dia</span>}
           </h2>
-          <p className="mt-1 font-display text-4xl font-black uppercase">{drill.title}</p>
-          <p className="text-pearl-dim">
+          <p className="mt-1 font-display text-4xl font-black uppercase leading-none">{drill.title}</p>
+          <p className="mt-1 text-pearl-dim">
             {drill.focus} · {keyLabel}
           </p>
         </div>
         <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={DRILLS.map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
-      </div>
-      <p className="mt-3 max-w-3xl text-pearl/90">{drill.how}</p>
+        <p className="text-pearl/90">{drill.how}</p>
 
-      <div className="mt-4 -mx-2 overflow-x-auto px-2">
-        <Fretboard inst={inst} from={Math.max(0, Math.min(...frets) - 1)} to={Math.min(inst.frets, Math.max(...frets) + 1)} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
-      </div>
-      <TabStrip inst={inst} seq={seq} perBeat={drill.perBeat} />
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
-        <div className="flex items-center gap-3">
-          <Button size="lg" onClick={toggle} className="min-w-40">
-            {running ? <Square className="size-4" aria-hidden /> : <Play className="size-5" aria-hidden />} {running ? 'Parar' : 'Metrônomo'} <Kbd>espaço</Kbd>
-          </Button>
-          <div className="flex items-center gap-1" aria-hidden>
-            {[0, 1, 2, 3].map((i) => (
-              <span key={i} className={`rounded-full transition-colors ${i === 0 ? 'size-5' : 'size-4'} ${beat === i ? (i === 0 ? 'bg-enclosure' : 'bg-pearl') : 'bg-wood-700'}`} />
-            ))}
+        <div className="rounded-xl border border-wood-700/70 bg-wood-950/50 p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => changeBpm(target - 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Diminuir andamento">−</button>
+            <span className="font-display text-5xl font-black w-24 text-center leading-none" aria-live="polite">{target}</span>
+            <button onClick={() => changeBpm(target + 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Aumentar andamento">+</button>
+            <span className="text-sm text-pearl-dim leading-tight">
+              BPM <Kbd>−</Kbd> <Kbd>+</Kbd>
+              <br />
+              {drill.perBeat === 4 ? '4 notas por clique' : '2 notas por clique'}
+            </span>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => changeBpm(target - 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Diminuir andamento">−</button>
-          <span className="font-display text-4xl font-black w-28 text-center" aria-live="polite">{target}</span>
-          <button onClick={() => changeBpm(target + 2)} className="grid place-items-center size-10 rounded-lg border border-wood-700 hover:bg-wood-800" aria-label="Aumentar andamento">+</button>
-          <span className="text-sm text-pearl-dim">
-            BPM · {drill.perBeat === 4 ? 'semicolcheias (4 notas por clique)' : 'colcheias (2 notas por clique)'}
-            {saved?.best ? ` · recorde limpo: ${saved.best}` : ''}
-          </span>
+          {saved?.best ? <p className="text-xs text-pearl-faint">Recorde limpo: {saved.best} BPM</p> : null}
+          <div className="flex items-center gap-3">
+            <Button size="lg" onClick={toggle} className="flex-1">
+              {running ? <Square className="size-4" aria-hidden /> : <Play className="size-5" aria-hidden />} {running ? 'Parar' : 'Metrônomo'} <Kbd>espaço</Kbd>
+            </Button>
+            <div className="flex items-center gap-1.5" aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className={`rounded-full transition-colors ${i === 0 ? 'size-5' : 'size-4'} ${beat === i ? (i === 0 ? 'bg-enclosure' : 'bg-pearl') : 'bg-wood-700'}`} />
+              ))}
+            </div>
+          </div>
           <Button variant="ghost" onClick={hear}>
-            <Volume2 className="size-4" aria-hidden /> Ouvir
+            <Volume2 className="size-4" aria-hidden /> Ouvir no andamento
           </Button>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button size="lg" className="flex-1" onClick={() => void done(true)}>
+            <Check className="size-5" aria-hidden /> Toquei limpo a {target}
+          </Button>
+          <Button variant="secondary" size="lg" onClick={() => void done(false)}>
+            Ainda não
+          </Button>
+        </div>
+        {feedback && <p className="text-sm text-pearl-dim" role="status">{feedback}</p>}
+        <p className="text-xs text-pearl-faint">
+          Toque o exercício algumas vezes no andamento. Se saiu limpo (sem notas abafadas, sem correr), marque e a meta sobe 4 BPM. Cada exercício guarda o seu próprio andamento.
+        </p>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button size="lg" onClick={() => void done(true)}>
-          <Check className="size-5" aria-hidden /> Toquei limpo a {target}
-        </Button>
-        <Button variant="secondary" size="lg" onClick={() => void done(false)}>
-          Ainda não
-        </Button>
-        {feedback && <p className="text-sm text-pearl-dim" role="status">{feedback}</p>}
+      <div className="min-w-0 flex flex-col justify-center gap-4">
+        <div className="-mx-2 overflow-x-auto px-2">
+          <Fretboard inst={inst} from={Math.max(0, Math.min(...frets) - 1)} to={Math.min(inst.frets, Math.max(...frets) + 1)} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
+        </div>
+        <p className="text-xs text-pearl-faint">Os números são a ordem de tocar (a primeira vez em que cada casa aparece); a tablatura abaixo mostra a sequência completa, subindo e descendo.</p>
+        <TabStrip inst={inst} seq={seq} perBeat={drill.perBeat} />
       </div>
-      <p className="mt-3 text-xs text-pearl-faint">
-        Toque o exercício algumas vezes no andamento. Se saiu limpo (sem notas abafadas, sem correr), marque e a meta sobe 4 BPM. Cada exercício guarda o seu próprio andamento.
-      </p>
     </section>
   )
 }
@@ -224,9 +230,9 @@ function TabStrip({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; pe
   const rows: FretPos[][] = []
   for (let i = 0; i < seq.length; i += chunk) rows.push(seq.slice(i, i + chunk))
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="grid gap-x-8 gap-y-2 min-[2200px]:grid-cols-2">
       {rows.map((row, ri) => (
-        <pre key={ri} className="font-mono text-sm leading-5 text-pearl-dim mb-2" aria-label={`Tablatura, linha ${ri + 1}`}>
+        <pre key={ri} className="min-w-0 overflow-x-auto font-mono text-sm leading-5 text-pearl-dim" aria-label={`Tablatura, linha ${ri + 1}`}>
           {strings
             .map((s) => {
               const cells = row.map((p, i) => {
