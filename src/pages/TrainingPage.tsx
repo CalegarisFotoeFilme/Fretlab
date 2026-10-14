@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Check, Dumbbell, Play, RotateCcw, Square, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
+import { audioCtx, playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
 import { Fretboard, type Marker } from '../components/Fretboard'
 import { Button, Meter, PageHeader, Segmented } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
@@ -12,9 +12,9 @@ import { ExerciseView } from '../exercises/ExerciseView'
 import { db } from '../progress/db'
 import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
-import { midiAt, stringNumber, type FretPos, type Instrument } from '../theory/instrument'
-import { prefersFlats } from '../theory/notes'
-import { DRILLS, drillOfDay, drillSequence, dueReviews, keyOfDay } from '../training/drills'
+import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
+import { mod12, prefersFlats } from '../theory/notes'
+import { DRILLS, drillOfDay, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
 
 /** Rodadas de cada lição na revisão mista (curta, como um "flashcard" da lição). */
 const REVIEW_ROUNDS = 3
@@ -81,10 +81,12 @@ function DrillPanel() {
   const inst = useInstrument()
   const noteName = useNoteName()
   const leftHanded = useSettings((s) => s.leftHanded)
-  // exercício e tom do dia: fixados ao abrir a página
-  const [{ today, root }] = useState(() => ({ today: drillOfDay(), root: keyOfDay() }))
+  // sugestão do dia (fixada ao abrir a página); tom e posição podem ser trocados
+  const [{ today, keyToday }] = useState(() => ({ today: drillOfDay(), keyToday: keyOfDay() }))
   const [drillId, setDrillId] = useState(today.id)
   const drill = DRILLS.find((d) => d.id === drillId)!
+  const [root, setRoot] = useState(keyToday)
+  const [position, setPosition] = useState(() => positionOfDay(today))
   const saved = useLiveQuery(() => db.drills.get(drillId), [drillId])
   const [bpm, setBpm] = useState<number | null>(null)
   const target = bpm ?? saved?.bpm ?? drill.startBpm
@@ -93,18 +95,35 @@ function DrillPanel() {
   const metro = useRef<MetronomeHandle | null>(null)
   const startedAt = useRef(0)
   const [feedback, setFeedback] = useState<string | null>(null)
+  // "ouvir no andamento": notas agendadas + metrônomo próprio, para poder parar no meio
+  const [listening, setListening] = useState(false)
+  const preview = useRef<{ timers: number[]; metro: MetronomeHandle | null }>({ timers: [], metro: null })
 
-  const seq = drillSequence(inst, drill, root)
+  const seq = drillSequence(inst, drill, root, position)
+  const stopPreview = () => {
+    preview.current.timers.forEach((t) => clearTimeout(t))
+    preview.current.metro?.stop()
+    preview.current = { timers: [], metro: null }
+    setListening(false)
+  }
   const stop = () => {
     metro.current?.stop()
     metro.current = null
     setRunning(false)
     setBeat(-1)
   }
-  useEffect(() => stop, [])
+  useEffect(
+    () => () => {
+      metro.current?.stop()
+      preview.current.timers.forEach((t) => clearTimeout(t))
+      preview.current.metro?.stop()
+    },
+    [],
+  )
 
   const toggle = () => {
     if (running) return stop()
+    stopPreview()
     startedAt.current ||= Date.now()
     metro.current = startMetronome(target, 4, (b) => setBeat(b % 4))
     setRunning(true)
@@ -119,16 +138,29 @@ function DrillPanel() {
   }
   const pickDrill = (id: string) => {
     stop()
+    stopPreview()
     setDrillId(id)
+    setPosition(positionOfDay(DRILLS.find((d) => d.id === id)!))
     setBpm(null)
     setFeedback(null)
   }
   const hear = () => {
-    const gap = 60 / target / drill.perBeat
-    seq.forEach((p, i) => setTimeout(() => playNote(midiAt(inst, p)), i * gap * 1000))
+    if (listening) return stopPreview()
+    stop()
+    const spb = 60 / target
+    const gap = spb / drill.perBeat
+    const beats = Math.ceil(seq.length / drill.perBeat)
+    // um compasso de contagem e depois a sequência, com o clique junto
+    const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
+    const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
+    const timers = seq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p)), lead + i * gap * 1000))
+    timers.push(window.setTimeout(() => stopPreview(), lead + beats * spb * 1000 + 200))
+    preview.current = { timers, metro: m }
+    setListening(true)
   }
   const done = async (clean: boolean) => {
     stop()
+    stopPreview()
     const minutes = minutesSince(startedAt.current)
     startedAt.current = 0
     const r = await recordDrill(drill.id, target, clean, Math.min(20, minutes))
@@ -139,37 +171,64 @@ function DrillPanel() {
 
   useHotkeys({ ' ': toggle, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
 
-  // número de ordem de cada posição (a primeira vez em que ela aparece)
+  // número de ordem de cada posição (a primeira vez em que ela aparece); fundamentais em laranja
   const order = new Map<string, number>()
   seq.forEach((p, i) => {
     const k = `${p.string}:${p.fret}`
     if (!order.has(k)) order.set(k, i + 1)
   })
-  const rootPc = root
   const markers: Marker[] = [...order.entries()].map(([k, i]) => {
     const [string, fret] = k.split(':').map(Number)
-    const isRoot = (midiAt(inst, { string, fret }) - rootPc) % 12 === 0 && drill.id !== 'aranha'
+    const isRoot = drill.usesKey && mod12(midiAt(inst, { string, fret }) - root) === 0
     return { string, fret, tone: isRoot ? 'root' : 'neutral', label: String(i) }
   })
   const frets = seq.map((p) => p.fret)
   const flats = prefersFlats(root)
-  const keyLabel = drill.id === 'aranha' ? 'casas 1 a 5' : `tom de ${noteName(root, flats)}`
+  const lesson = drill.lesson ? findLesson(drill.lesson) : null
 
   return (
     // ultrawide: controles à esquerda, braço e tablatura à direita, tudo sem rolar
-    <section className="panel p-5 grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)] xl:gap-8">
+    <section className="panel p-5 grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)] xl:gap-8">
       <div className="flex flex-col gap-4 min-w-0">
         <div>
           <h2 className="eyebrow flex items-center gap-2">
             <Dumbbell className="size-4" aria-hidden /> Aquecimento {drill.id === today.id && <span className="text-enclosure">· exercício do dia</span>}
           </h2>
           <p className="mt-1 font-display text-4xl font-black uppercase leading-none">{drill.title}</p>
-          <p className="mt-1 text-pearl-dim">
-            {drill.focus} · {keyLabel}
-          </p>
+          <p className="mt-1 text-pearl-dim">{drill.focus}</p>
         </div>
         <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={DRILLS.map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
-        <p className="text-pearl/90">{drill.how}</p>
+
+        {drill.usesKey && (
+          <div>
+            <p className="eyebrow mb-1.5">
+              Tom {root === keyToday ? <span className="text-enclosure">· tom do dia</span> : <button className="underline normal-case tracking-normal" onClick={() => setRoot(keyToday)}>voltar ao tom do dia ({noteName(keyToday, prefersFlats(keyToday))})</button>}
+            </p>
+            <div className="grid grid-cols-6 gap-1" role="radiogroup" aria-label="Tom">
+              {Array.from({ length: 12 }, (_, pc) => (
+                <button
+                  key={pc}
+                  role="radio"
+                  aria-checked={root === pc}
+                  onClick={() => setRoot(pc)}
+                  className={`min-h-9 rounded-lg text-sm font-semibold ${root === pc ? 'bg-enclosure text-wood-950' : pc === keyToday ? 'border border-enclosure/50 text-pearl' : 'text-pearl-dim hover:bg-wood-800'}`}
+                >
+                  {noteName(pc, prefersFlats(pc))}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <p className="eyebrow mb-1.5">Posição: <span className="normal-case tracking-normal text-pearl-dim">{drill.positionLabel(position)}</span></p>
+          <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Posição">
+            {Array.from({ length: drill.positions }, (_, i) => (
+              <button key={i} role="radio" aria-checked={position === i} title={drill.positionLabel(i)} onClick={() => setPosition(i)} className={`min-h-9 min-w-9 px-2 rounded-lg text-sm font-semibold ${position === i ? 'bg-wood-700 text-pearl' : 'text-pearl-dim hover:bg-wood-800'}`}>
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="rounded-xl border border-wood-700/70 bg-wood-950/50 p-4 flex flex-col gap-3">
           <div className="flex items-center gap-3">
@@ -180,9 +239,9 @@ function DrillPanel() {
               BPM <Kbd>−</Kbd> <Kbd>+</Kbd>
               <br />
               {drill.perBeat === 4 ? '4 notas por clique' : '2 notas por clique'}
+              {saved?.best ? ` · recorde ${saved.best}` : ''}
             </span>
           </div>
-          {saved?.best ? <p className="text-xs text-pearl-faint">Recorde limpo: {saved.best} BPM</p> : null}
           <div className="flex items-center gap-3">
             <Button size="lg" onClick={toggle} className="flex-1">
               {running ? <Square className="size-4" aria-hidden /> : <Play className="size-5" aria-hidden />} {running ? 'Parar' : 'Metrônomo'} <Kbd>espaço</Kbd>
@@ -193,8 +252,8 @@ function DrillPanel() {
               ))}
             </div>
           </div>
-          <Button variant="ghost" onClick={hear}>
-            <Volume2 className="size-4" aria-hidden /> Ouvir no andamento
+          <Button variant={listening ? 'secondary' : 'ghost'} onClick={hear} aria-pressed={listening}>
+            {listening ? <Square className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />} {listening ? 'Parar o exemplo' : 'Ouvir no andamento'}
           </Button>
         </div>
 
@@ -207,43 +266,81 @@ function DrillPanel() {
           </Button>
         </div>
         {feedback && <p className="text-sm text-pearl-dim" role="status">{feedback}</p>}
-        <p className="text-xs text-pearl-faint">
-          Toque o exercício algumas vezes no andamento. Se saiu limpo (sem notas abafadas, sem correr), marque e a meta sobe 4 BPM. Cada exercício guarda o seu próprio andamento.
-        </p>
       </div>
 
-      <div className="min-w-0 flex flex-col justify-center gap-4">
-        <div className="-mx-2 overflow-x-auto px-2">
+      <div className="min-w-0 flex flex-col gap-4">
+        <div className="grid gap-4 2xl:grid-cols-2">
+          <div className="rounded-xl border border-wood-700/60 bg-wood-950/40 p-4">
+            <p className="eyebrow">Por que este exercício</p>
+            <p className="mt-1.5 text-sm text-pearl/90">{drill.why}</p>
+            {lesson && (
+              <Link to={`/licao/${lesson.lesson.id}`} className="mt-2 inline-block text-sm text-enclosure underline">
+                Rever a lição: {lesson.lesson.title}
+              </Link>
+            )}
+          </div>
+          <div className="rounded-xl border border-wood-700/60 bg-wood-950/40 p-4">
+            <p className="eyebrow">Como tocar</p>
+            <p className="mt-1.5 text-sm text-pearl/90">{drill.how}</p>
+            <p className="mt-2 text-xs text-pearl-faint">Marque "Toquei limpo" quando sair sem notas abafadas e sem correr: a meta sobe 4 BPM. Cada exercício guarda o seu andamento.</p>
+          </div>
+        </div>
+        <div className="-mx-2 overflow-x-auto px-2 w-full max-w-3xl mx-auto">
           <Fretboard inst={inst} from={Math.max(0, Math.min(...frets) - 1)} to={Math.min(inst.frets, Math.max(...frets) + 1)} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
         </div>
-        <p className="text-xs text-pearl-faint">Os números são a ordem de tocar (a primeira vez em que cada casa aparece); a tablatura abaixo mostra a sequência completa, subindo e descendo.</p>
-        <TabStrip inst={inst} seq={seq} perBeat={drill.perBeat} />
+        <p className="text-xs text-pearl-faint">
+          Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(root, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
+        </p>
+        <TabView inst={inst} seq={seq} perBeat={drill.perBeat} />
       </div>
     </section>
   )
 }
 
-/** Tablatura simples da sequência, em linhas de 16 notas. */
-function TabStrip({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; perBeat: number }) {
-  const strings = [...inst.openMidi.keys()].reverse()
-  const chunk = perBeat * 4
-  const rows: FretPos[][] = []
-  for (let i = 0; i < seq.length; i += chunk) rows.push(seq.slice(i, i + chunk))
+/**
+ * Tablatura desenhada (SVG) da sequência: um compasso de 4 tempos por bloco, as notas de cada tempo
+ * agrupadas e as cordas com o nome, como numa tab de verdade.
+ */
+function TabView({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; perBeat: number }) {
+  const noteName = useNoteName()
+  const perBar = perBeat * 4
+  const bars: FretPos[][] = []
+  for (let i = 0; i < seq.length; i += perBar) bars.push(seq.slice(i, i + perBar))
+  const n = inst.openMidi.length
+  const GAP = 13 // distância entre cordas
+  const CELL = 22
+  const BEAT_GAP = 10
+  const PAD = 30
+  const height = GAP * (n - 1) + 24
+  const xOf = (i: number) => PAD + i * CELL + Math.floor(i / perBeat) * BEAT_GAP + CELL / 2
+  const width = xOf(perBar - 1) + CELL / 2 + 10
+  const yOf = (string: number) => 12 + GAP * (n - 1 - string) // corda grave embaixo
   return (
-    <div className="grid gap-x-8 gap-y-2 min-[2200px]:grid-cols-2">
-      {rows.map((row, ri) => (
-        <pre key={ri} className="min-w-0 overflow-x-auto font-mono text-sm leading-5 text-pearl-dim" aria-label={`Tablatura, linha ${ri + 1}`}>
-          {strings
-            .map((s) => {
-              const cells = row.map((p, i) => {
-                const cell = p.string === s ? String(p.fret) : '-'
-                const sep = (i + 1) % perBeat === 0 ? ' |' : ''
-                return cell.padStart(2, '-') + '-' + sep
-              })
-              return `${String(stringNumber(inst, s)).padStart(1)} |-${cells.join('')}`
-            })
-            .join('\n')}
-        </pre>
+    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))]">
+      {bars.map((bar, bi) => (
+        <figure key={bi} className="rounded-lg border border-wood-700/50 bg-wood-950/40 px-1 py-2">
+          <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label={`Tablatura, compasso ${bi + 1}`}>
+            {inst.openMidi.map((open, s) => (
+              <g key={s}>
+                <text x={10} y={yOf(s) + 4} textAnchor="middle" fontSize={10} fontFamily="var(--font-mono)" fill="var(--color-pearl-faint)">
+                  {noteName(mod12(open))}
+                </text>
+                <line x1={20} x2={width - 4} y1={yOf(s)} y2={yOf(s)} stroke="var(--color-wood-600)" strokeWidth={1} />
+              </g>
+            ))}
+            <line x1={20} x2={20} y1={yOf(n - 1)} y2={yOf(0)} stroke="var(--color-pearl-faint)" strokeWidth={1.5} />
+            <line x1={width - 4} x2={width - 4} y1={yOf(n - 1)} y2={yOf(0)} stroke="var(--color-pearl-faint)" strokeWidth={1.5} />
+            {bar.map((p, i) => (
+              <g key={i}>
+                <rect x={xOf(i) - 8} y={yOf(p.string) - 7} width={16} height={14} rx={3} fill="var(--color-wood-900)" />
+                <text x={xOf(i)} y={yOf(p.string) + 4} textAnchor="middle" fontSize={12} fontWeight={700} fontFamily="var(--font-mono)" fill="var(--color-pearl)">
+                  {p.fret}
+                </text>
+              </g>
+            ))}
+          </svg>
+          <figcaption className="px-2 font-mono text-[10px] text-pearl-faint">compasso {bi + 1}</figcaption>
+        </figure>
       ))}
     </div>
   )

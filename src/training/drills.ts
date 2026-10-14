@@ -1,127 +1,200 @@
-import type { NoteSetSource } from '../curriculum/types'
-import { setPcs, setPositions } from '../exercises/generate'
 import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
-import { mod12 } from '../theory/notes'
+import { SCALES, mod12 } from '../theory/notes'
 
 /*
   Treino do Dia, à la Guitar Aerobics (Troy Nelson): um exercício técnico curto por dia, com metrônomo
-  e um andamento alvo que sobe quando você toca limpo. Os exercícios aplicam a teoria dos mundos
-  (escala, pentatônica, arpejo, oitava) e são gerados para o instrumento configurado.
+  e um andamento alvo que sobe quando você toca limpo. Cada exercício tem várias posições no braço;
+  o tom e a posição rodam dia a dia (e podem ser escolhidos), para o braço inteiro ser treinado.
 */
 
 export interface Drill {
   id: string
   title: string
-  /** o que o exercício trabalha */
+  /** o que o exercício trabalha, em poucas palavras */
   focus: string
+  /** por que fazer: o que desenvolve e como se liga à teoria */
+  why: string
   how: string
   /** notas por clique do metrônomo (2 = colcheias, 4 = semicolcheias) */
   perBeat: number
-  /** andamento inicial sugerido */
   startBpm: number
+  /** quantas posições o exercício tem no braço */
+  positions: number
+  positionLabel: (i: number) => string
+  /** usa tom? (a aranha cromática não tem tom) */
+  usesKey: boolean
+  /** lição da trilha que o exercício reforça */
+  lesson?: string
 }
+
+const ARPEGGIO_SHAPES = [
+  { string: 0, name: 'forma de E (fundamental na corda mais grave)' },
+  { string: 1, name: 'forma de A (fundamental na 2ª corda)' },
+  { string: 2, name: 'forma de D (fundamental na 3ª corda)' },
+]
 
 export const DRILLS: Drill[] = [
   {
     id: 'aranha',
     title: 'Aranha cromática',
     focus: 'independência dos dedos e sincronia das mãos',
-    how: 'Um dedo por casa (1-2-3-4) em cada corda, subindo da mais grave à mais aguda e voltando. Palhetada alternada ou dedos alternados.',
+    why: 'É o aquecimento clássico: um dedo por casa obriga os quatro dedos a trabalharem por igual, e a palhetada (ou os dedos) alternada precisa cair junto com a mão esquerda. Ela prepara a mão para tocar por posição, que é como as escalas e arpejos do resto do treino são estudados.',
+    how: 'Um dedo por casa (1-2-3-4) em cada corda, subindo da mais grave à mais aguda e voltando pelas mesmas casas. Palhetada alternada (ou dedos alternados).',
     perBeat: 4,
     startBpm: 60,
+    positions: 3,
+    positionLabel: (i) => `casas ${1 + i * 4} a ${4 + i * 4}`,
+    usesKey: false,
+    lesson: 'w1-cordas-soltas',
   },
   {
     id: 'pentatonica',
-    title: 'Pentatônica menor, caixa 1',
-    focus: 'a escala mais usada do rock e do blues',
-    how: 'Suba e desça a caixa inteira, duas notas por corda. Mão parada, um dedo por casa.',
+    title: 'Pentatônica menor',
+    focus: 'a escala mais usada do rock e do blues, nas 5 caixas',
+    why: 'A pentatônica menor é o vocabulário básico de solos e linhas de baixo. Estudar as cinco caixas, uma por dia, liga o braço inteiro: o fim de uma caixa é o começo da outra, como no CAGED. Dizer os graus (1, b3, 4, 5, b7) enquanto toca fixa a teoria nos dedos.',
+    how: 'Duas notas por corda, subindo e descendo a caixa inteira. Mão parada na posição; as fundamentais (laranja) são o ponto de referência.',
     perBeat: 2,
     startBpm: 70,
+    positions: 5,
+    positionLabel: (i) => `caixa ${i + 1}`,
+    usesKey: true,
+    lesson: 'w4-pentatonica-menor',
   },
   {
     id: 'maior',
-    title: 'Escala maior na posição',
-    focus: 'a régua da teoria, sem mudar de posição',
-    how: 'Suba e desça a escala maior com a fundamental no dedo 2. Diga os graus em voz alta na primeira passada.',
+    title: 'Escala maior, 3 notas por corda',
+    focus: 'a escala-régua da teoria, em 7 posições',
+    why: 'A escala maior é a régua de toda a teoria: graus, intervalos, acordes e campo harmônico saem dela. Três notas por corda deixa a digitação regular (sempre 3 notas em cada corda) e, a cada dia, começa num grau diferente, cobrindo o braço em 7 posições.',
+    how: 'Três notas em cada corda, subindo e descendo. Comece devagar e use sempre o mesmo dedo para o mesmo intervalo (tom = dedos abertos, semitom = dedos colados).',
     perBeat: 2,
     startBpm: 60,
+    positions: 7,
+    positionLabel: (i) => `começando no ${i + 1}º grau`,
+    usesKey: true,
+    lesson: 'w4-maior-posicao',
   },
   {
     id: 'arpejos',
     title: 'Arpejos maior e menor',
-    focus: 'enxergar 1, 3 e 5 na posição',
-    how: 'Suba o arpejo maior e desça o menor, sem tirar a mão do lugar. Só a terça muda.',
+    focus: 'enxergar 1, 3 e 5 nas formas E, A e D',
+    why: 'Arpejo é o acorde nota por nota: é o que o baixista toca para "contar" a harmonia e o que o guitarrista usa para solar em cima de cada acorde. Subir o maior e descer o menor na mesma forma mostra que só a terça muda (3 → b3).',
+    how: 'Suba o arpejo maior e desça o menor, sem tirar a mão do lugar. Fundamental e quinta ficam paradas; só a terça desce meio tom (3 → b3), às vezes trocando de corda para caber na mão.',
     perBeat: 2,
     startBpm: 60,
+    positions: ARPEGGIO_SHAPES.length,
+    positionLabel: (i) => ARPEGGIO_SHAPES[i].name,
+    usesKey: true,
+    lesson: 'w5-arpejo-maior',
   },
   {
     id: 'oitavas',
     title: 'Oitavas pulando corda',
-    focus: 'precisão de mão direita e a forma da oitava',
-    how: 'Fundamental na corda mais grave, oitava duas cordas acima; suba casa a casa. Abafe a corda do meio.',
+    focus: 'precisão da mão que toca e a forma da oitava',
+    why: 'A oitava é a forma mais útil para se achar no braço (mundo de Intervalos) e a base de muitas linhas de baixo de funk e disco. Pular uma corda treina a precisão da mão que toca e o abafamento da corda do meio.',
+    how: 'Fundamental na corda grave, oitava duas cordas acima; suba casa a casa. Abafe a corda do meio com a ponta do dedo que segura a nota grave.',
     perBeat: 2,
     startBpm: 70,
+    positions: 2,
+    positionLabel: (i) => (i === 0 ? 'cordas 1ª e 3ª mais graves' : 'cordas 2ª e 4ª mais graves'),
+    usesKey: true,
+    lesson: 'w3-oitava',
   },
 ]
 
 const DAY_MS = 24 * 3600 * 1000
-/** Número do dia (local), para sortear o exercício e o tom de forma estável ao longo do dia. */
+/** Número do dia (local), para sortear exercício, tom e posição de forma estável ao longo do dia. */
 export const dayNumber = (d = new Date()) => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / DAY_MS)
 
 export const drillOfDay = (d = new Date()) => DRILLS[dayNumber(d) % DRILLS.length]
 
-/** Tom do dia: um ciclo de tons comuns de rock/pop. */
-export const KEYS_CYCLE = [9, 4, 7, 2, 0, 5]
-export const keyOfDay = (d = new Date()) => KEYS_CYCLE[dayNumber(d) % KEYS_CYCLE.length]
+/** Tom do dia: percorre o ciclo das quintas, para todos os tons aparecerem. */
+export const KEYS_CYCLE = [9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2]
+export const keyOfDay = (d = new Date()) => KEYS_CYCLE[Math.floor(dayNumber(d) / DRILLS.length) % KEYS_CYCLE.length]
 
-/** Sobe pelas notas (sem repetir altura) e desce de volta, sem repetir o topo. */
-function upAndDown(inst: Instrument, ps: FretPos[]): FretPos[] {
-  const byMidi = new Map<number, FretPos>()
-  for (const p of [...ps].sort((a, b) => a.string - b.string || a.fret - b.fret)) if (!byMidi.has(midiAt(inst, p))) byMidi.set(midiAt(inst, p), p)
-  const up = [...byMidi.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)
-  return [...up, ...up.slice(0, -1).reverse()]
+/** Posição do dia de um exercício (muda a cada volta pelos exercícios). */
+export const positionOfDay = (drill: Drill, d = new Date()) => Math.floor(dayNumber(d) / DRILLS.length) % drill.positions
+
+/** Casa da nota na corda, a partir de `min` (para sobrar espaço para a posição). */
+function fretOn(inst: Instrument, string: number, pc: number, min: number) {
+  const f = mod12(pc - inst.openMidi[string])
+  return f < min ? f + 12 : f
 }
 
-/** Fundamental do tom na corda mais grave, a partir da casa 3 (sobra espaço para a posição dos dois lados). */
-function rootFret(inst: Instrument, root: number) {
-  const f = mod12(root - inst.openMidi[0])
-  return f < 3 ? f + 12 : f
+/** Sobe e depois desce, sem repetir o topo. */
+const upAndDown = (up: FretPos[]) => [...up, ...up.slice(0, -1).reverse()]
+
+/** Desce uma oitava se a posição passar do fim do braço (e couber). */
+function fitNeck(inst: Instrument, ps: FretPos[]) {
+  const max = Math.max(...ps.map((p) => p.fret))
+  if (max <= inst.frets) return ps
+  const lowered = ps.map((p) => ({ ...p, fret: p.fret - 12 }))
+  return lowered.every((p) => p.fret >= 0) ? lowered : ps
 }
 
-function inPosition(inst: Instrument, root: number, set: NoteSetSource, offset: number, width: number) {
-  const r = rootFret(inst, root)
-  return setPositions(inst, setPcs(root, set), r + offset, r + offset + width)
+/**
+ * Escala "n notas por corda": a partir do grau `start` (0 = tônica) na corda mais grave, cada corda
+ * recebe as próximas `perString` notas da escala, subindo. Com 2 por corda na pentatônica saem as 5
+ * caixas; com 3 por corda na maior, as 7 posições.
+ */
+function scaleByString(inst: Instrument, root: number, steps: readonly number[], perString: number, start: number): FretPos[] {
+  const r = inst.openMidi[0] + fretOn(inst, 0, root, 1)
+  const pitches: number[] = []
+  for (let oct = 0; pitches.length < start + perString * inst.openMidi.length; oct++) for (const s of steps) pitches.push(r + 12 * oct + s)
+  const seq = pitches.slice(start)
+  const out: FretPos[] = []
+  inst.openMidi.forEach((open, string) => {
+    for (let k = 0; k < perString; k++) out.push({ string, fret: seq[string * perString + k] - open })
+  })
+  return fitNeck(inst, out)
 }
 
-/** Sequência de posições (na ordem de tocar) do exercício, para o instrumento e o tom. */
-export function drillSequence(inst: Instrument, drill: Drill, root: number): FretPos[] {
+/** Arpejo (tríade) na forma cuja fundamental está em `string`: notas do acorde nas 4 casas da forma. */
+function arpeggio(inst: Instrument, root: number, string: number, third: 3 | 4): FretPos[] {
+  const s = Math.min(string, inst.openMidi.length - 1)
+  const f = fretOn(inst, s, root, 1)
+  const pcs = [root, mod12(root + third), mod12(root + 7)]
+  const out: FretPos[] = []
+  inst.openMidi.forEach((open, str) => {
+    for (let fret = Math.max(0, f - 1); fret <= f + 3; fret++) if (pcs.includes(mod12(open + fret)) && (str > s || (str === s && fret >= f))) out.push({ string: str, fret })
+  })
+  // uma posição por altura, subindo
+  const byPitch = new Map<number, FretPos>()
+  for (const p of out.sort((a, b) => a.string - b.string || a.fret - b.fret)) if (!byPitch.has(midiAt(inst, p))) byPitch.set(midiAt(inst, p), p)
+  return [...byPitch.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)
+}
+
+/** Sequência de posições (na ordem de tocar) do exercício, para o instrumento, o tom e a posição. */
+export function drillSequence(inst: Instrument, drill: Drill, root: number, position = 0): FretPos[] {
   const n = inst.openMidi.length
+  const pos = ((position % drill.positions) + drill.positions) % drill.positions
   switch (drill.id) {
     case 'aranha': {
-      const start = 1
+      const start = 1 + pos * 4
       const up = Array.from({ length: n }, (_, s) => [0, 1, 2, 3].map((i) => ({ string: s, fret: start + i }))).flat()
       const down = Array.from({ length: n }, (_, k) => n - 1 - k).flatMap((s) => [3, 2, 1, 0].map((i) => ({ string: s, fret: start + i })))
       return [...up, ...down]
     }
     case 'pentatonica':
-      return upAndDown(inst, inPosition(inst, root, { scale: 'minorPentatonic' }, 0, 3))
+      return upAndDown(scaleByString(inst, root, SCALES.minorPentatonic.steps, 2, pos))
     case 'maior':
-      return upAndDown(inst, inPosition(inst, root, { scale: 'major' }, -1, 4))
+      return upAndDown(scaleByString(inst, root, SCALES.major.steps, 3, pos))
     case 'arpejos': {
-      const up = upAndDown(inst, inPosition(inst, root, { chord: 'maj' }, -1, 3))
-      const minor = upAndDown(inst, inPosition(inst, root, { chord: 'min' }, -1, 3))
-      // sobe o maior (até o topo) e desce o menor (do topo)
-      return [...up.slice(0, Math.ceil(up.length / 2)), ...minor.slice(Math.floor(minor.length / 2))]
+      const { string } = ARPEGGIO_SHAPES[pos]
+      const major = arpeggio(inst, root, string, 4)
+      const minor = arpeggio(inst, root, string, 3)
+      // sobe o maior e desce o menor, na mesma forma
+      return fitNeck(inst, [...major, ...minor.slice(0, -1).reverse()])
     }
     case 'oitavas': {
-      // 6 casas subindo + a oitava 2 casas à frente: se não couber no braço, começa uma oitava abaixo
-      let r = rootFret(inst, root)
-      if (r + 7 > inst.frets && r >= 12) r -= 12
-      const top = Math.min(2, n - 1)
-      return Array.from({ length: 6 }, (_, i) => [
-        { string: 0, fret: r + i },
-        { string: top, fret: r + i + (top === 2 ? 2 : 0) },
+      const low = Math.min(pos, n - 3)
+      const high = low + 2
+      const shift = 12 - (inst.openMidi[high] - inst.openMidi[low])
+      const r = fretOn(inst, low, root, 1)
+      const seq = Array.from({ length: 6 }, (_, i) => [
+        { string: low, fret: r + i },
+        { string: high, fret: r + i + shift },
       ]).flat()
+      return fitNeck(inst, seq)
     }
   }
   return []

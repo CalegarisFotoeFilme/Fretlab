@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { makeInstrument, midiAt } from '../theory/instrument'
+import { SCALES, mod12 } from '../theory/notes'
 import { DRILLS, dayNumber, drillOfDay, drillSequence, dueReviews } from './drills'
 
 const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
 
 describe('Treino do Dia', () => {
-  it('todo exercício gera uma sequência tocável em todo instrumento e tom', () => {
+  it('todo exercício gera uma sequência tocável em todo instrumento, tom e posição', () => {
     for (const inst of instruments)
       for (const drill of DRILLS)
+        for (let pos = 0; pos < drill.positions; pos++)
         for (let root = 0; root < 12; root++) {
-          const seq = drillSequence(inst, drill, root)
-          expect(seq.length, `${drill.id} ${inst.kind} ${root}`).toBeGreaterThanOrEqual(8)
+          const seq = drillSequence(inst, drill, root, pos)
+          // arpejos nas cordas agudas do baixo de 4 cordas têm menos notas (só sobram 2–3 cordas)
+          expect(seq.length, `${drill.id} ${inst.kind} ${root} ${pos}`).toBeGreaterThanOrEqual(drill.id === 'arpejos' ? 5 : 8)
           for (const p of seq) {
             expect(p.string).toBeLessThan(inst.openMidi.length)
             expect(p.fret).toBeGreaterThanOrEqual(0)
@@ -26,6 +29,26 @@ describe('Treino do Dia', () => {
     for (let i = 1; i <= top; i++) expect(seq[i]).toBeGreaterThan(seq[i - 1])
     for (let i = top + 1; i < seq.length; i++) expect(seq[i]).toBeLessThan(seq[i - 1])
     expect(seq.at(-1)).toBe(seq[0])
+  })
+
+  it('caixas e posições: só notas da escala, com o número certo de notas por corda, e mão numa região', () => {
+    for (const inst of instruments) {
+      const n = inst.openMidi.length
+      for (const [id, steps, perString, positions] of [
+        ['pentatonica', SCALES.minorPentatonic.steps, 2, 5],
+        ['maior', SCALES.major.steps, 3, 7],
+      ] as const)
+        for (let pos = 0; pos < positions; pos++)
+          for (let root = 0; root < 12; root++) {
+            const seq = drillSequence(inst, DRILLS.find((d) => d.id === id)!, root, pos)
+            const up = seq.slice(0, n * perString)
+            for (const p of up) expect(steps.map((s) => mod12(root + s))).toContain(mod12(midiAt(inst, p)))
+            for (let s = 0; s < n; s++) expect(up.filter((p) => p.string === s)).toHaveLength(perString)
+            const frets = up.map((p) => p.fret)
+            // a posição cabe na mão (com a abertura de um dedo a mais na corda Si da guitarra)
+            expect(Math.max(...frets) - Math.min(...frets), `${id} ${inst.kind} ${root} ${pos}`).toBeLessThanOrEqual(perString === 3 ? 6 : 5)
+          }
+    }
   })
 
   it('o exercício do dia muda de um dia para o outro e é estável no mesmo dia', () => {

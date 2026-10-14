@@ -36,7 +36,13 @@
   - **Ritmo II** (7): ponto e tercina na notação (`q.`, `e.`, `te`), ditado rítmico;
   - **Leitura de partitura** (7): pauta própria com Bravura (`src/components/Staff.tsx`, `src/theory/staff.ts`), clave de sol/fá 8vb, ler a nota pelo nome, no braço ou tocando.
 - Blocos de explicação: fórmula (passos T/S e som), mapa no braço com a posição, campo harmônico, forma de intervalo e pauta.
-- **Treino do Dia** (`/treino`, `src/training/drills.ts`): aquecimento técnico à la *Guitar Aerobics* (5 exercícios gerados para o instrumento e o tom do dia, braço numerado, tablatura, metrônomo, meta de BPM salva por exercício na tabela `drills`) e revisão espaçada por lição (reprovada volta no dia; 1★ em 1 dia; 2★ em 3; 3★ em 7), numa sessão mista.
+- **Treino do Dia** (`/treino`, `src/training/drills.ts`): aquecimento técnico à la *Guitar Aerobics*. São 5 exercícios, cada um com várias posições:
+  - pentatônica nas 5 caixas, "2 notas por corda";
+  - escala maior em 7 posições, "3 notas por corda";
+  - arpejos nas formas E/A/D;
+  - aranha em 3 regiões;
+  - oitavas em 2 pares de cordas.
+  Tom (ciclo das quintas) e posição rodam dia a dia e podem ser escolhidos. Cada exercício tem "por que" e "como tocar" e um link para a lição relacionada. A tela tem braço numerado, tablatura em SVG por compasso, metrônomo e "ouvir no andamento" (liga/desliga). A meta de BPM fica salva por exercício na tabela `drills`. e revisão espaçada por lição (reprovada volta no dia; 1★ em 1 dia; 2★ em 3; 3★ em 7), numa sessão mista.
 - Trilha com mundos recolhíveis (nome, descrição e progresso; lições ao clicar).
 - Gamificação: estrelas (60/80/95%), XP, nível e dias seguidos, tudo salvo em IndexedDB. **Tudo desbloqueado desde o início**, por pedido do usuário: a trilha só sugere a próxima lição (a primeira sem estrela).
 - Exercícios:
@@ -91,7 +97,17 @@ O plano original foi concluído (Mundos 3–9, Treino do Dia, modo espera, Ritmo
 2. Treino do Dia: registrar os fatos errados (corda/casa, intervalo, grau) para uma repetição espaçada mais fina, além da revisão por lição.
 3. Leitura de partitura em mais posições (casas 5–8, 7–10…), leitura rítmica + melódica juntas e leitura de trechos curtos.
 4. Pentatônica nas 5 caixas conectadas (como o CAGED) e modos gregos completos.
-5. Opcional: casco desktop com **Tauri** para abrir o Songsterr embutido (o site bloqueia iframe com `X-Frame-Options: Deny`). Não foi feito porque exige instalar o toolchain do Rust (rustup) no Mac; o botão "Songsterr ao lado" cobre o uso hoje.
+5. ~~Casco desktop com Tauri~~: feito (ver abaixo).
+
+## App para Mac (Tauri)
+
+- `src-tauri/`: Tauri 2. Comandos Rust:
+  - `open_songsterr`: abre o Songsterr numa janela do app, na metade direita da tela;
+  - `read_download`: só lê arquivos que essa janela baixou.
+- Os downloads da janela do Songsterr vão para `~/Downloads` e são importados na biblioteca automaticamente (`useSongsterrImports` no `AppShell`).
+- `npm run desktop` roda em desenvolvimento, e `npm run desktop:build` gera `src-tauri/target/release/bundle/macos/FretLab.app`.
+- O Rust foi instalado via rustup (`~/.cargo`).
+- O app tem o próprio armazenamento: o progresso do navegador passa para ele pelo backup em Ajustes, e as músicas precisam ser importadas de novo.
 
 ## Mapa do código
 
