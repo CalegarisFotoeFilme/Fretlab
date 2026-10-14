@@ -67,4 +67,4 @@ src/pages       telas
 docs/           metodologia
 ```
 
-Veja também [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md) e [`THIRD_PARTY.md`](THIRD_PARTY.md).
+Veja também [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md), [`THIRD_PARTY.md`](THIRD_PARTY.md) e, para continuar o desenvolvimento, [`HANDOFF.md`](HANDOFF.md).

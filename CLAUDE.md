@@ -1,5 +1,7 @@
 # FretLab: notas para agentes
 
+> **Sessão nova? Leia `HANDOFF.md` primeiro e execute a seção "Primeiros passos" de lá**: estado atual, o que falta testar e próximos passos. Responda em PT-BR.
+
 - Interface e textos em **PT-BR**. Os comentários de código também são em português.
 - Alvo principal: **macOS em ultrawide 2560×1080 com mouse e teclado**. Telas largas usam layouts lado a lado (`xl:`/`2xl:`) e evitam rolagem vertical nos exercícios. O celular é secundário (braço vertical, toque).
 - Toda ação frequente tem atalho de teclado (`src/components/useHotkeys.tsx`, com `<Kbd>` no botão). O braço (`Fretboard`) é navegável por setas.
