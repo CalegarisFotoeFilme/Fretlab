@@ -194,4 +194,6 @@ export interface World {
   approach?: string
   lessons: Lesson[]
   comingSoon?: boolean
+  /** mundo só de um instrumento (técnica); sem isso, vale para todos */
+  instrument?: 'bass' | 'guitar'
 }

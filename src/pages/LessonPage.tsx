@@ -10,6 +10,7 @@ import { findLesson, nextLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
 import { recordAttempt, useProgress, type AttemptResult } from '../progress/progress'
+import { useSettings } from '../progress/settings'
 
 type Phase = 'teach' | 'play' | 'result'
 
@@ -129,7 +130,8 @@ function ResultView({
   lesson, result, onRetry, onNext,
 }: { lesson: Lesson; result: AttemptResult & { accuracy: number }; onRetry: () => void; onNext: (id: string) => void }) {
   const progress = useProgress()
-  const next = progress ? nextLesson((l) => progress.lessons.get(l)?.stars ?? 0) : null
+  const instrument = useSettings((s) => s.instrument)
+  const next = progress ? nextLesson((l) => progress.lessons.get(l)?.stars ?? 0, instrument) : null
   const pct = Math.round(result.accuracy * 100)
   const headline =
     result.stars === 3 ? 'Perfeito.' : result.stars === 2 ? 'Mandou bem.' : result.stars === 1 ? 'Passou!' : 'Ainda não foi.'

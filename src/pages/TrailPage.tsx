@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '../components/AppShell'
 import { LinkButton, Meter, Stars } from '../components/ui'
-import { WORLDS, nextLesson } from '../curriculum'
+import { nextLesson, worldsFor } from '../curriculum'
 import type { World } from '../curriculum/types'
 import { useProgress, type ProgressSummary } from '../progress/progress'
 import { DOUBLE_INLAYS, INLAY_FRETS, INSTRUMENT_LABEL } from '../theory/instrument'
@@ -40,7 +40,7 @@ export function TrailPage() {
   const { open, toggle } = useOpenWorlds()
   if (!progress) return null
   const starsOf = (id: string) => progress.lessons.get(id)?.stars ?? 0
-  const next = nextLesson(starsOf)
+  const next = nextLesson(starsOf, instrument)
 
   return (
     <div className="mx-auto max-w-6xl 2xl:max-w-[1640px] px-4 md:px-10 pt-6 md:pt-10">
@@ -72,7 +72,7 @@ export function TrailPage() {
         </aside>
 
         <div className="lg:order-1 grid gap-4 2xl:grid-cols-2 2xl:gap-x-8 items-start pb-6">
-          {WORLDS.map((w, i) => (
+          {worldsFor(instrument).map((w, i) => (
             <WorldNeck key={w.id} world={w} index={i} starsOf={starsOf} nextId={next?.id} open={open.has(w.id)} onToggle={() => toggle(w.id)} />
           ))}
         </div>

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_LESSONS, nextLesson } from '../curriculum'
+import { ALL_LESSONS, WORLDS, nextLesson, worldsFor } from '../curriculum'
 import { makeInstrument, pcAt } from '../theory/instrument'
 import { degreeChordMidis, noteSetRound, setPcs, theoryQuestion, findNoteRound, hearIntervalRound, intervalOptions, intervalRound, intervalTargets, nameNoteRound, parsePattern, HAND_SPAN } from './generate'
 import { midiAt } from '../theory/instrument'
 import { pcName } from '../theory/notes'
 import { onsetBeats, totalBeats } from './rhythmScore'
 
-const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
+const allInstruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
+const instruments = allInstruments
 
 describe('geradores', () => {
   it('find-note sempre tem alvo nas cordas pedidas', () => {
@@ -134,7 +135,9 @@ describe('escalas, arpejos e teoria', () => {
 
 describe('currículo', () => {
   it('todos os exercícios são válidos', () => {
-    for (const l of ALL_LESSONS) {
+    for (const w of WORLDS) for (const l of w.lessons) {
+      // mundos de técnica valem só para o próprio instrumento
+      const instruments = allInstruments.filter((i) => !w.instrument || (w.instrument === 'guitar') === (i.kind === 'guitar6'))
       const ex = l.exercise
       if (ex.type === 'rhythm-dictation') {
         ex.patterns.forEach((p) => expect(totalBeats(parsePattern(p)), `${l.id}: ${p}`).toBe(4))
@@ -173,6 +176,12 @@ describe('currículo', () => {
     }
   })
 
+  it('mundos de técnica aparecem só para o instrumento deles', () => {
+    expect(worldsFor('bass4').map((w) => w.id)).toContain('tecnica-baixo')
+    expect(worldsFor('bass4').map((w) => w.id)).not.toContain('tecnica-guitarra')
+    expect(worldsFor('guitar6').map((w) => w.id)).toContain('tecnica-guitarra')
+    expect(worldsFor('guitar6').map((w) => w.id)).not.toContain('tecnica-baixo')
+  })
   it('ids são únicos', () => {
     expect(new Set(ALL_LESSONS.map((l) => l.id)).size).toBe(ALL_LESSONS.length)
   })

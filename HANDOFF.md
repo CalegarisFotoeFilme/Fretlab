@@ -112,7 +112,15 @@
 - O mostrar/ocultar do vídeo fica na barra flutuante do player (ícone de vídeo, tecla V).
 - **Ainda não confirmado pelo usuário:** tocar com a "Gravação (YouTube)" no app. No navegador, o fluxo foi validado com dados injetados.
 
-### C. Próximo planejamento (pedido do usuário)
+### C. Técnica (feito em 14/10, primeira versão)
+
+- Mundo 10 **Técnica de baixo** (`world10-bass-technique.ts`): dois dedos, abafamento, ghost notes, slap, ligados, walking (arpejos de 7ª), palheta, tapping/revisão.
+- Mundo 11 **Técnica de guitarra** (`world11-guitar-technique.ts`): alternada, palm mute, econômica/string skipping, legato, bends/vibrato, sweep (arpejos), pestana (formas de E e A), tapping/velocidade.
+- `World.instrument` + `worldsFor(kind)`; a trilha e a "próxima lição" usam só os mundos do instrumento configurado. Teste em `generate.test.ts`.
+- Falta (próximo passo): drills técnicos no Treino do Dia (`src/training/drills.ts`), símbolos de técnica (T/P, x) na notação, bend conferido pelo detector de altura.
+- Atenção: o service worker (PWA) também roda no app para Mac; logo depois de instalar uma build nova, a primeira abertura pode mostrar a versão anterior. Reabrir resolve. Avaliar desligar o SW no Tauri.
+
+### C0. Planejamento original (referência)
 
 1. **Mundo de técnica de baixo:** pizzicato com dois dedos (alternância e "rest stroke"), slap (thumb e pop), tapping, abafamento (mão esquerda e direita), ghost notes, hammer-on/pull-off e slides, palhetada no baixo, walking bass. Por lição:
    - explicação da mecânica;
