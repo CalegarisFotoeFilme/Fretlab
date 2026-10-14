@@ -28,16 +28,25 @@
 ## Estado atual
 
 **Funciona (testado):**
-- Trilha com 3 mundos completos:
-  - **O Braço**: 11 lições;
-  - **Ritmo I**: 7 lições;
-  - **Intervalos**: 12 lições, com três exercícios novos: tocar o intervalo (no braço ou no instrumento), nomear pela forma e identificar de ouvido (melódico e harmônico). Na explicação, um bloco mostra a forma de cada intervalo no braço.
+- Trilha com 9 mundos completos (83 lições), validados automaticamente para baixo 4/5 e guitarra 6 (`generate.test.ts`):
+  - **O Braço** (11) e **Ritmo I** (7);
+  - **Intervalos** (12): tocar o intervalo (braço ou instrumento), nomear pela forma, identificar de ouvido;
+  - **Escalas** (11), **Acordes e arpejos** (10) e **CAGED e mapas** (9): exercício "desenhe no braço" (`note-set`), que acha todas as notas de uma escala/acorde numa posição (`ShapeAnchor` = corda da fundamental + casas), clicando ou tocando subindo;
+  - **Campo harmônico** (9): quiz de teoria gerado (`theory-quiz`) e ouvido de graus (`hear-degree`);
+  - **Ritmo II** (7): ponto e tercina na notação (`q.`, `e.`, `te`), ditado rítmico;
+  - **Leitura de partitura** (7): pauta própria com Bravura (`src/components/Staff.tsx`, `src/theory/staff.ts`), clave de sol/fá 8vb, ler a nota pelo nome, no braço ou tocando.
+- Blocos de explicação: fórmula (passos T/S e som), mapa no braço com a posição, campo harmônico, forma de intervalo e pauta.
+- **Treino do Dia** (`/treino`, `src/training/drills.ts`): aquecimento técnico à la *Guitar Aerobics* (5 exercícios gerados para o instrumento e o tom do dia, braço numerado, tablatura, metrônomo, meta de BPM salva por exercício na tabela `drills`) e revisão espaçada por lição (reprovada volta no dia; 1★ em 1 dia; 2★ em 3; 3★ em 7), numa sessão mista.
+- Trilha com mundos recolhíveis (nome, descrição e progresso; lições ao clicar).
 - Gamificação: estrelas (60/80/95%), XP, nível e dias seguidos, tudo salvo em IndexedDB. **Tudo desbloqueado desde o início**, por pedido do usuário: a trilha só sugere a próxima lição (a primeira sem estrela).
 - Exercícios:
   - achar a nota, clicando ou tocando;
   - nomear a nota;
-  - quiz;
-  - ritmo, por toque/espaço ou pelo instrumento, com metrônomo e avaliação em ms.
+  - quiz e quiz de teoria gerado;
+  - intervalos, "desenhe no braço", ouvido de acordes e graus;
+  - ritmo, por toque/espaço ou pelo instrumento, com metrônomo e avaliação em ms; ditado rítmico;
+  - ler a nota na pauta.
+  - A escolha do componente pelo tipo fica em `src/exercises/ExerciseView.tsx` (lições e Treino do Dia).
 - Braço SVG: baixo 4/5, guitarra 6, afinações, canhoto. Fica horizontal no desktop e vertical em tela estreita, e é navegável por setas.
 - Explorador do braço: escalas, acordes, campo harmônico, notas ou graus.
 - Afinador e ajustes: instrumento, afinação, nomes das notas, dispositivo de entrada, sensibilidade, compensação de latência, backup JSON.
@@ -51,6 +60,7 @@
   - player alphaTab com faixas, velocidade, loop, metrônomo e silenciar a própria faixa;
   - modos "O que tocar" (teclas 1–4): banda, só a faixa, faixa + bateria, faixa + metrônomo; "Tirar faixa" (T);
   - controles flutuantes sobre a partitura, como no Songsterr: barra compacta sempre visível e painel expansível (C) com velocidade, "O que tocar", toggles e faixas. A escolha fica salva no `localStorage`;
+  - **modo espera** (W): a cada nota da faixa escolhida o player pausa até ouvir a nota certa no instrumento;
   - metrônomo visual em destaque no topo da partitura, fora dos controles: uma luz por tempo, o tempo forte pisca maior, com o nº do compasso (eventos de metrônomo do alphaTab);
   - painel **"Teoria desta música"** (`src/theory/analysis.ts` + `src/library/songAnalysis.ts` + `src/components/SongTheory.tsx`):
     - tom e graus mais tocados pela faixa;
@@ -70,16 +80,18 @@
 
 ## Próximos passos (prioridade)
 
-1. Validar no Mac os itens "não testados" acima e corrigir o que aparecer.
-2. **Fase 2 do currículo**: Intervalos pronto; os Mundos 4–7 aparecem como "em construção" em `src/curriculum/index.ts`.
-   - **Escalas**: padrões e estudo por posição à la Leavitt.
-   - **Acordes e arpejos**: construção pela fórmula à la Denyer.
-   - **CAGED** na guitarra e mapas de arpejo no baixo.
-   - **Campo harmônico**, ligado à biblioteca de músicas.
-3. **Treino do Dia** à la *Guitar Aerobics*: um treino curto e progressivo por dia, com metrônomo e meta de BPM, mais repetição espaçada (SRS) dos fatos errados (nota na corda/casa, intervalos, graus).
-4. **Modo espera** no player: o app pausa até você tocar a nota certa, estilo Simply Piano. Usa `input` + o cursor do alphaTab.
-5. Ritmo II (semicolcheias, tercinas, síncopes, ditado) e leitura de partitura (VexFlow).
-6. Opcional: casco desktop com **Tauri** para abrir o Songsterr embutido. O site bloqueia iframe (`X-Frame-Options: Deny`).
+O plano original foi concluído (Mundos 3–9, Treino do Dia, modo espera, Ritmo II e leitura). Sugestões a partir daqui:
+
+1. Validar no Mac, com a pedaleira, o que depende de áudio real:
+   - modo espera do player;
+   - "desenhe no braço" tocando;
+   - ritmo pelo instrumento;
+   - leitura tocando.
+   Ajustar sensibilidade e latência se preciso.
+2. Treino do Dia: registrar os fatos errados (corda/casa, intervalo, grau) para uma repetição espaçada mais fina, além da revisão por lição.
+3. Leitura de partitura em mais posições (casas 5–8, 7–10…), leitura rítmica + melódica juntas e leitura de trechos curtos.
+4. Pentatônica nas 5 caixas conectadas (como o CAGED) e modos gregos completos.
+5. Opcional: casco desktop com **Tauri** para abrir o Songsterr embutido (o site bloqueia iframe com `X-Frame-Options: Deny`). Não foi feito porque exige instalar o toolchain do Rust (rustup) no Mac; o botão "Songsterr ao lado" cobre o uso hoje.
 
 ## Mapa do código
 
@@ -87,8 +99,9 @@
 |---|---|
 | `src/theory` | notas, intervalos, escalas, acordes, campo harmônico (`notes.ts`), instrumento/braço (`instrument.ts`), estimativa de tom (`key.ts`) |
 | `src/audio` | `engine.ts`: síntese Karplus-Strong, metrônomo, `input` (getUserMedia sem filtros de voz); `pitch.ts`: pitchy + estabilizador; `useInput.ts` |
-| `src/exercises` | componentes de exercício + `generate.ts` (rodadas) + `rhythmScore.ts` (pontuação do ritmo) |
-| `src/curriculum` | lições como dados; `index.ts` tem os mundos e a próxima lição sugerida |
+| `src/exercises` | componentes de exercício, `ExerciseView.tsx` (escolhe pelo tipo), `generate.ts` (rodadas e perguntas geradas), `rhythmScore.ts` (pontuação do ritmo) |
+| `src/curriculum` | lições como dados (`world1`…`world9`); `index.ts` tem os mundos e a próxima lição sugerida |
+| `src/training` | Treino do Dia: exercícios técnicos gerados e revisão espaçada |
 | `src/progress` | Dexie (`db.ts`), XP/estrelas/dias seguidos (`scoring.ts`, `progress.ts`), ajustes (`settings.ts`, Zustand) |
 | `src/library` | `alphatab.ts` (carregamento UMD, caminhos, Songsterr), `midiImport.ts` (MIDI → GP) |
 | `src/components` | `Fretboard.tsx`, `RhythmStaff.tsx` (glifos Bravura), `TeachBlocks.tsx`, `ui.tsx`, `useHotkeys.tsx`, `AppShell.tsx` |

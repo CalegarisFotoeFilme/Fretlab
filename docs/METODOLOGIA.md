@@ -25,9 +25,10 @@ O FretLab organiza o estudo do jeito que métodos consagrados de guitarra e baix
 | 1 | O Braço | ✅ 11 lições |
 | 2 | Ritmo I | ✅ 7 lições |
 | 3 | Intervalos | ✅ 12 lições |
-| 4 | Escalas | em construção |
-| 5 | Acordes e arpejos | em construção |
-| 6 | CAGED (guitarra) / mapas de arpejo (baixo) | em construção |
-| 7 | Campo harmônico | em construção |
-| 8 | Ritmo II (semicolcheias, tercinas, síncopes, ditado) | planejado |
-| 9 | Leitura de partitura | planejado |
+| 4 | Escalas | ✅ 11 lições |
+| 5 | Acordes e arpejos | ✅ 10 lições |
+| 6 | CAGED (guitarra) / mapas de arpejo (baixo) | ✅ 9 lições |
+| 7 | Campo harmônico | ✅ 9 lições |
+| 8 | Ritmo II (semicolcheias, tercinas, síncopes, ditado) | ✅ 7 lições |
+| 9 | Leitura de partitura | ✅ 7 lições |
+| — | Treino do Dia (aquecimento à la *Guitar Aerobics* + revisão espaçada) | ✅ |

@@ -9,13 +9,15 @@ App pessoal de estudo de teoria musical para **baixo e guitarra**, no estilo Sim
 - **Trilha gamificada**: mundos em ordem sugerida (tudo aberto desde o início), com estrelas (60/80/95% de acerto), XP, nível e sequência de dias.
   - **O Braço** (11 lições): cordas soltas, alfabeto musical, notas por corda, casa 12, sustenidos/bemóis, oitavas e o desafio final.
   - **Ritmo I** (7 lições): pulso, figuras, colcheias, pausas e ritmo tocado no instrumento.
-- **Exercícios**: achar a nota (clique ou tocando), nomear a nota, quiz e ritmo com metrônomo (avaliação em ms).
+  - **Intervalos** (12), **Escalas** (11), **Acordes e arpejos** (10), **CAGED e mapas** (9), **Campo harmônico** (9), **Ritmo II** (7) e **Leitura de partitura** (7).
+- **Treino do Dia**: aquecimento técnico diário à la *Guitar Aerobics* (metrônomo e meta de BPM que sobe) e revisão espaçada das lições.
+- **Exercícios**: achar e nomear notas; tocar, nomear e ouvir intervalos; desenhar escalas, arpejos e formas CAGED numa posição (clicando ou tocando); ouvir acordes e graus; quiz de teoria gerado; ritmo com metrônomo (avaliação em ms) e ditado rítmico; leitura de notas na pauta.
 - **Ouve o instrumento**: detecção de nota (McLeod/pitchy) pelo microfone ou pela pedaleira como interface USB. Tem afinador e funciona até o Si grave do baixo de 5 cordas.
 - **Braço livre**: escalas, acordes e campo harmônico em qualquer tom, com rótulos de nota ou de grau.
 - **Músicas**:
   - importa **Guitar Pro**, **MusicXML** e o **MIDI do Songsterr**. O MIDI é convertido em tablatura com a corda e a casa exatas, porque o Songsterr grava uma corda por canal;
-  - player com velocidade, loop, metrônomo e opção de silenciar a sua faixa;
-  - painel **"Teoria desta música"** com tom estimado, escala no braço e campo harmônico;
+  - player com velocidade, loop, metrônomo, modos "o que tocar" (só a faixa, + bateria, + metrônomo), **modo espera** (pausa até você tocar a nota certa), controles flutuantes e metrônomo visual;
+  - painel **"Teoria desta música"**: tom, graus, campo harmônico usado, progressão principal e análise de cada compasso (acorde, função, nota de repouso, escalas);
   - o Songsterr não pode rodar dentro de um site (ele bloqueia iframes), então há um botão que o abre numa janela ao lado.
 - **Instrumentos**: baixo de 4 e 5 cordas, guitarra de 6 cordas, afinações alternativas e modo canhoto.
 - **Interface pensada para desktop/ultrawide** com mouse e teclado. Os atalhos aparecem nos botões, e o braço é navegável pelas setas. O toque também funciona no celular, onde o braço fica vertical.
