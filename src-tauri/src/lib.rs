@@ -24,6 +24,13 @@ struct DownloadDone {
     page_url: Option<String>,
 }
 
+/// Identifica a janela do Songsterr como o Safari: o Google recusa login em navegador "embutido"
+/// (reconhecido pelo user agent padrão do WKWebView, que não traz "Version/… Safari/…").
+const SAFARI_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15";
+
+/// Rótulos únicos para as janelas pop-up (ex.: login com Google).
+static POPUPS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// Caminho livre em Downloads: "arquivo.gp", "arquivo (1).gp", ...
 fn free_path(dir: PathBuf, name: &str) -> PathBuf {
     let candidate = dir.join(name);
@@ -64,8 +71,23 @@ fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
     }
 
     let handle = app.clone();
+    let popup_app = app.clone();
     WebviewWindowBuilder::new(&app, "songsterr", WebviewUrl::External(parsed))
         .title("Songsterr · FretLab")
+        .user_agent(SAFARI_UA)
+        // pop-ups (login com Google): janela do app ligada à que abriu, para o login voltar ao Songsterr
+        .on_new_window(move |_url, features| {
+            let n = POPUPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let built = WebviewWindowBuilder::new(&popup_app, format!("songsterr-popup-{n}"), WebviewUrl::External("about:blank".parse().expect("about:blank")))
+                .window_features(features)
+                .user_agent(SAFARI_UA)
+                .title("Entrar · Songsterr")
+                .build();
+            match built {
+                Ok(window) => tauri::webview::NewWindowResponse::Create { window },
+                Err(_) => tauri::webview::NewWindowResponse::Deny,
+            }
+        })
         .position(origin.x + half, origin.y)
         .inner_size(size.width - half, size.height)
         .on_download(move |webview, event| {

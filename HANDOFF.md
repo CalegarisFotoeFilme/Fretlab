@@ -96,6 +96,7 @@
 - **SoundFont:** dá para carregar um SoundFont próprio em Ajustes (tabela `assets`, `applySoundFont`). Ele também é reaplicado ao voltar do modo YouTube.
 - **Ajustes:** cartão explicando que plugins e pedaleiras USB não impedem a detecção.
 - **Vídeo do YouTube:** pode ficar oculto (tecla `V`).
+- **Login com Google no Songsterr (app):** a janela do Songsterr se identifica como Safari (o Google recusa navegador "embutido") e abre os pop-ups (`on_new_window`) como janelas do app, ligadas à que abriu. Verificado: o Google mostrou a conta do usuário. Chave de acesso (passkey) pode não funcionar em app sem a permissão da Apple; nesse caso, entrar com senha e código.
 - **Conserto:** "Abrir o Songsterr" no app (comandos declarados no `build.rs` e liberados na capability). Verificado com um autoteste: a janela abre na metade direita e o site carrega.
 
 ### B. Validar com o usuário (precisa do Mac e da pedaleira)
