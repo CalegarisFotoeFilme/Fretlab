@@ -11,13 +11,38 @@ import { Fretboard } from './Fretboard'
 import { RhythmStaff } from './RhythmStaff'
 import { Button } from './ui'
 
-export function TeachBlocks({ blocks }: { blocks: TeachBlock[] }) {
+const isVisual = (b: TeachBlock) => b.kind !== 'text' && b.kind !== 'tip'
+
+/**
+ * Em telas largas, texto à esquerda e visuais (braço, ritmo) à direita, para caber
+ * numa tela baixa (ultrawide) sem rolar. Em telas estreitas, tudo em sequência.
+ */
+export function TeachBlocks({ blocks, footer }: { blocks: TeachBlock[]; footer?: React.ReactNode }) {
+  const visuals = blocks.filter(isVisual)
   return (
-    <div className="flex flex-col gap-5">
-      {blocks.map((b, i) => (
-        <Block key={i} block={b} />
-      ))}
-    </div>
+    <>
+      <div className="flex flex-col gap-5 xl:hidden">
+        {blocks.map((b, i) => (
+          <Block key={i} block={b} />
+        ))}
+        {footer}
+      </div>
+      <div className={`hidden xl:grid gap-10 ${visuals.length ? 'grid-cols-[minmax(0,560px)_minmax(0,1fr)]' : 'grid-cols-[minmax(0,720px)]'}`}>
+        <div className="flex flex-col gap-5">
+          {blocks.filter((b) => !isVisual(b)).map((b, i) => (
+            <Block key={i} block={b} />
+          ))}
+          {footer}
+        </div>
+        {visuals.length > 0 && (
+          <div className="flex flex-col gap-5 self-start sticky top-8">
+            {visuals.map((b, i) => (
+              <Block key={i} block={b} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 

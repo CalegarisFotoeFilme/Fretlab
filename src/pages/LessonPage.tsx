@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { uiSound } from '../audio/engine'
 import { TeachBlocks } from '../components/TeachBlocks'
 import { Button, LinkButton, Meter, Stars } from '../components/ui'
+import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { findLesson, isUnlocked, nextLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { FindNote } from '../exercises/FindNote'
@@ -78,11 +79,13 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
     setPhase('play')
   }
 
+  useHotkeys({ Enter: () => setPhase('play') }, phase === 'teach')
+
   const ex = lesson.exercise
   const props = { round, onRoundDone }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 md:px-10 pb-10 pt-[max(1rem,env(safe-area-inset-top))] md:pt-8">
+    <div className="mx-auto max-w-[1760px] px-4 md:px-10 pb-10 pt-[max(1rem,env(safe-area-inset-top))] md:pt-8">
       <div className="flex items-center gap-3 mb-6">
         <Link to="/" className="grid place-items-center size-11 -ml-2 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Sair da lição">
           <X className="size-6" aria-hidden />
@@ -104,10 +107,14 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
       {phase === 'teach' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-5xl font-black uppercase mb-6">{lesson.title}</h1>
-          <TeachBlocks blocks={lesson.teach} />
-          <Button size="lg" className="mt-8 w-full" onClick={() => setPhase('play')}>
-            Praticar
-          </Button>
+          <TeachBlocks
+            blocks={lesson.teach}
+            footer={
+              <Button size="lg" className="mt-3 w-full" onClick={() => setPhase('play')}>
+                Praticar <Kbd>enter</Kbd>
+              </Button>
+            }
+          />
         </motion.div>
       )}
 

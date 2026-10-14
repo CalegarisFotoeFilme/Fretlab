@@ -34,7 +34,7 @@ export function ExplorerPage() {
   const lowestRoot = inst.openMidi[0] + mod12(root - inst.openMidi[0])
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8">
+    <div className="mx-auto max-w-[1700px] px-4 md:px-10 pt-8">
       <PageHeader eyebrow="Estudo livre" title="Braço">
         Escolha uma tônica e veja onde caem as notas de escalas, acordes e do campo harmônico. Toque no braço para ouvir.
       </PageHeader>

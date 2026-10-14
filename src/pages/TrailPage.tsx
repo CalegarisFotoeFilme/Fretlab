@@ -16,30 +16,39 @@ export function TrailPage() {
   const next = nextLesson(starsOf)
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 md:pt-10">
+    <div className="mx-auto max-w-6xl 2xl:max-w-[1640px] px-4 md:px-10 pt-6 md:pt-10">
       <div className="flex items-center justify-between md:hidden mb-6">
         <Logo />
         <span className="eyebrow">{INSTRUMENT_LABEL[instrument]}</span>
       </div>
 
-      <StatusBar progress={progress} />
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px] lg:gap-14">
+        <aside className="lg:order-2">
+          <div className="lg:sticky lg:top-10 flex flex-col gap-4">
+            <StatusBar progress={progress} />
+            {next && (
+              <section className="panel p-5 relative overflow-hidden" aria-labelledby="next-title">
+                <div className="absolute -right-10 -top-10 size-40 rounded-full bg-enclosure/10 blur-2xl" aria-hidden />
+                <p className="eyebrow">{progress.lessons.size ? 'Continuar de onde parou' : 'Primeira lição'}</p>
+                <h2 id="next-title" className="mt-2 text-3xl font-extrabold uppercase">{next.title}</h2>
+                <p className="mt-1 text-pearl-dim">{next.summary}</p>
+                <LinkButton to={`/licao/${next.id}`} size="lg" className="mt-4 w-full">
+                  Começar lição
+                </LinkButton>
+              </section>
+            )}
+            <div className="hidden lg:flex items-center justify-between text-sm text-pearl-faint px-1">
+              <span>{INSTRUMENT_LABEL[instrument]}</span>
+              <span className="font-mono">hoje: +{progress.todayXp} XP</span>
+            </div>
+          </div>
+        </aside>
 
-      {next && (
-        <section className="panel mt-4 p-5 relative overflow-hidden" aria-labelledby="next-title">
-          <div className="absolute -right-10 -top-10 size-40 rounded-full bg-enclosure/10 blur-2xl" aria-hidden />
-          <p className="eyebrow">{progress.lessons.size ? 'Continuar de onde parou' : 'Primeira lição'}</p>
-          <h2 id="next-title" className="mt-2 text-3xl font-extrabold uppercase">{next.title}</h2>
-          <p className="mt-1 text-pearl-dim">{next.summary}</p>
-          <LinkButton to={`/licao/${next.id}`} size="lg" className="mt-4 w-full sm:w-auto">
-            Começar lição
-          </LinkButton>
-        </section>
-      )}
-
-      <div className="mt-10 space-y-12">
-        {WORLDS.map((w, i) => (
-          <WorldNeck key={w.id} world={w} index={i} starsOf={starsOf} nextId={next?.id} />
-        ))}
+        <div className="lg:order-1 grid gap-12 2xl:grid-cols-2 2xl:gap-x-14 items-start pb-6">
+          {WORLDS.map((w, i) => (
+            <WorldNeck key={w.id} world={w} index={i} starsOf={starsOf} nextId={next?.id} />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -42,10 +42,10 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 pt-8">
+    <div className="mx-auto max-w-5xl px-4 md:px-10 pt-8">
       <PageHeader eyebrow="Configuração" title="Ajustes" />
 
-      <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
         <Field label="Instrumento" hint="Tudo no app (braço, exercícios, afinador) segue essa escolha.">
           <Segmented<InstrumentKind>
             label="Instrumento"

@@ -3,6 +3,7 @@ import {
   chordName, chordNotes, harmonicField, intervalBetween, midiName, parseMidi, parsePc, pcName, scaleNotes,
 } from './notes'
 import { findMidiPositions, findPositions, makeInstrument, midiAt, pcAt, stringNumber } from './instrument'
+import { estimateKey, histogramOf } from './key'
 
 describe('notas', () => {
   it('converte nomes', () => {
@@ -64,5 +65,16 @@ describe('braço', () => {
   it('suporta baixo de 5 cordas e afinações', () => {
     expect(midiAt(makeInstrument('bass5'), { string: 0, fret: 0 })).toBe(23)
     expect(pcName(pcAt(makeInstrument('guitar6', 'dropD'), { string: 0, fret: 0 }))).toBe('D')
+  })
+})
+
+describe('tonalidade', () => {
+  it('reconhece Sol maior e Lá menor', () => {
+    // escala de G maior com ênfase em G e D
+    const g = histogramOf([67, 69, 71, 72, 74, 76, 78, 67, 67, 74, 71].map((midi) => ({ midi })))
+    expect(estimateKey(g)[0]).toMatchObject({ root: 7, mode: 'major' })
+    // pentatônica de A menor com ênfase em A e E
+    const am = histogramOf([57, 60, 62, 64, 67, 57, 57, 64, 60].map((midi) => ({ midi })))
+    expect(estimateKey(am)[0]).toMatchObject({ root: 9, mode: 'minor' })
   })
 })

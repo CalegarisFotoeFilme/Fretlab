@@ -51,13 +51,14 @@ export function Fretboard({
   const wrap = useRef<HTMLDivElement>(null)
   const narrow = useIsNarrow(wrap)
   const vertical = orientation === 'vertical' || (orientation === 'auto' && narrow)
+  const [cursor, setCursor] = useState<FretPos | null>(null)
 
   const nStrings = inst.openMidi.length
   const showOpen = from === 0
   const firstFret = Math.max(1, from)
 
   // Geometria abstrata: "along" corre pelo braço (pestana → corpo), "across" atravessa as cordas.
-  const STRING_GAP = vertical ? (nStrings > 4 ? 54 : 66) : 34
+  const STRING_GAP = vertical ? (nStrings > 4 ? 54 : 66) : 42
   const OPEN = vertical ? 46 : 44
   const NUT = 7
   const BASE = vertical ? 58 : 74
@@ -189,28 +190,52 @@ export function Fretboard({
           )
         })}
 
-        {/* área clicável */}
+        {/* área clicável: Tab entra no braço, setas andam pelas casas, Enter/Espaço responde */}
         {onPick &&
           inst.openMidi.map((_, s) =>
             cells.map((f) => {
               const disabled = dim(s)
               const pick = () => !disabled && onPick({ string: s, fret: f })
+              const firstActive = inst.openMidi.findIndex((_, i) => !dim(i))
+              const isCursor = cursor ? cursor.string === s && cursor.fret === f : s === firstActive && f === cells[0]
+              const move = (svg: SVGSVGElement | null, ds: number, df: number) => {
+                let ns = s
+                let nf = f
+                do {
+                  ns += ds
+                } while (ds !== 0 && ns >= 0 && ns < nStrings && dim(ns))
+                nf = Math.min(to, Math.max(cells[0], f + df))
+                if (ns < 0 || ns >= nStrings) return
+                setCursor({ string: ns, fret: nf })
+                requestAnimationFrame(() => svg?.querySelector<SVGElement>(`[data-cell="${ns}-${nf}"]`)?.focus())
+              }
+              // setas seguem o desenho na tela (vertical: ↓ avança casas; horizontal: → avança casas)
+              const mirror = leftHanded ? -1 : 1
+              const keys: Record<string, [number, number]> = vertical
+                ? { ArrowDown: [0, 1], ArrowUp: [0, -1], ArrowRight: [mirror, 0], ArrowLeft: [-mirror, 0] }
+                : { ArrowRight: [0, mirror], ArrowLeft: [0, -mirror], ArrowUp: [1, 0], ArrowDown: [-1, 0] }
               return (
                 <rect
                   key={`hit${s}-${f}`}
+                  data-cell={`${s}-${f}`}
                   {...R(cellStart(f), cellEnd(f), across(s) - STRING_GAP / 2, across(s) + STRING_GAP / 2)}
                   fill="transparent"
                   role="button"
-                  tabIndex={disabled ? -1 : 0}
+                  tabIndex={isCursor && !disabled ? 0 : -1}
                   aria-label={`Corda ${stringNumber(inst, s)}, ${f === 0 ? 'solta' : `casa ${f}`}`}
                   aria-disabled={disabled || undefined}
                   style={{ cursor: disabled ? 'default' : 'pointer' }}
                   className="fret-hit"
                   onClick={pick}
+                  onFocus={() => setCursor({ string: s, fret: f })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
+                      e.stopPropagation()
                       pick()
+                    } else if (keys[e.key]) {
+                      e.preventDefault()
+                      move(e.currentTarget.ownerSVGElement, ...keys[e.key])
                     }
                   }}
                 />

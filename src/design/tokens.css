@@ -86,6 +86,9 @@
   .fret-hit:hover {
     fill: rgb(242 118 46 / 0.12);
   }
+  .fret-hit:focus:not(:focus-visible) {
+    outline: none;
+  }
   .fret-hit:focus-visible {
     outline: none;
     fill: rgb(242 118 46 / 0.22);
@@ -110,4 +113,21 @@
   font-family: 'Bravura';
   src: url('/vendor/alphatab/font/Bravura.woff2') format('woff2');
   font-display: block;
+}
+
+/* alphaTab: cursor de reprodução e seleção no tema escuro */
+.alphatab-host .at-cursor-bar {
+  background: rgb(242 118 46 / 0.12);
+}
+.alphatab-host .at-cursor-beat {
+  background: var(--color-enclosure);
+  width: 3px;
+  box-shadow: 0 0 10px var(--color-enclosure);
+}
+.alphatab-host .at-selection div {
+  background: rgb(242 118 46 / 0.2);
+}
+.alphatab-host .at-highlight * {
+  fill: var(--color-enclosure);
+  stroke: var(--color-enclosure);
 }

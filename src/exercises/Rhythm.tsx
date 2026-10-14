@@ -9,6 +9,7 @@ import { useInstrument, useSettings } from '../progress/settings'
 import { parsePattern } from './generate'
 import { onsetBeats, scoreRhythm, totalBeats, type RhythmEvent, type RhythmScore } from './rhythm'
 import type { ExerciseProps } from './types'
+import { Kbd, useHotkeys } from '../components/useHotkeys'
 
 type Phase = 'ready' | 'countin' | 'playing' | 'done'
 
@@ -112,11 +113,18 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
     onOnset: (t) => (phase === 'playing' || phase === 'countin') && registerHit(t),
   })
 
+  useHotkeys({
+    Enter: () => {
+      if (phase === 'ready') start()
+      else if (phase === 'done' && result) onRoundDone(result.accuracy)
+    },
+  })
+
   const hitsForStaff = result?.hits
   const perfect = result?.hits.filter((h) => h.grade === 'perfect' || h.grade === 'good').length ?? 0
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 max-w-[1200px] mx-auto w-full">
       <div className="flex items-center justify-between">
         <p className="eyebrow">{spec.bpm} BPM · 4/4</p>
         <Button variant="ghost" onClick={() => previewPattern(events, spec.bpm, inst.openMidi[0] + 12)} disabled={phase === 'countin' || phase === 'playing'}>
@@ -144,8 +152,13 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
       </div>
 
       {phase === 'ready' && (
+        <p className="text-center text-pearl-dim -mt-2">
+          O metrônomo conta 4 tempos antes. {playMode ? 'Depois, toque a corda solta mais grave no ritmo.' : 'Depois, marque cada nota no tempo certo.'}
+        </p>
+      )}
+      {phase === 'ready' && (
         <Button size="lg" onClick={start}>
-          <Play className="size-5" aria-hidden /> Começar ({playMode ? 'conte 4 e toque' : 'conte 4 e toque na tela'})
+          <Play className="size-5" aria-hidden /> Começar <Kbd>enter</Kbd>
         </Button>
       )}
 
@@ -164,8 +177,12 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
             className="h-36 rounded-[var(--radius-pedal)] bg-wood-800 border border-wood-600 shadow-[0_6px_0_var(--color-wood-950)] active:translate-y-1 active:shadow-[0_2px_0_var(--color-wood-950)] font-display text-3xl font-black uppercase touch-manipulation select-none"
             aria-label="Tocar (ou aperte espaço)"
           >
-            Toque
-            <span className="block font-sans text-sm font-normal text-pearl-faint normal-case">ou aperte espaço</span>
+            <span className="md:hidden">Toque aqui</span>
+            <span className="hidden md:inline">Espaço</span>
+            <span className="block font-sans text-sm font-normal text-pearl-faint normal-case">
+              <span className="md:hidden">no ritmo das notas</span>
+              <span className="hidden md:inline">aperte no ritmo das notas (ou clique aqui)</span>
+            </span>
           </button>
         ))}
 
@@ -175,7 +192,7 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
             Tentar de novo
           </Button>
           <Button size="lg" onClick={() => onRoundDone(result.accuracy)} autoFocus>
-            Continuar
+            Continuar <Kbd>enter</Kbd>
           </Button>
         </div>
       )}
