@@ -24,6 +24,8 @@ export interface Song {
   /** De onde veio a tab: Guitar Pro, MusicXML ou MIDI convertido pelo FretLab. */
   origin?: 'gp' | 'musicxml' | 'midi'
   skippedTracks?: string[]
+  /** mixagem do player desta música: volume geral (0–1) e por faixa (multiplicador 0–2, índice da faixa) */
+  mix?: { master: number; tracks: Record<number, number> }
   notes?: string
   addedAt: number
   lastOpenedAt?: number

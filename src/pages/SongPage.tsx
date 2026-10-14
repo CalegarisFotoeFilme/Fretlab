@@ -1,6 +1,6 @@
 import type * as AT from '@coderline/alphatab'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, VolumeX } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAudioInput } from '../audio/useInput'
@@ -147,7 +147,18 @@ export function SongPage() {
             void db.songs.update(cur.id!, { title: s.title || cur.title, artist: s.artist || cur.artist })
           }
         })
-        inst.playerReady.on(() => setReady(true))
+        inst.playerReady.on(() => {
+          setReady(true)
+          // volumes salvos desta música
+          const mix = songRef.current?.mix
+          if (mix) {
+            inst.masterVolume = mix.master
+            for (const [i, v] of Object.entries(mix.tracks)) {
+              const t = inst.score?.tracks[Number(i)]
+              if (t) inst.changeTrackVolume([t], v)
+            }
+          }
+        })
         // tempos por compasso (fórmula de compasso de onde o cursor está), para o metrônomo visual
         let beatsPerBar = 4
         inst.playedBeatChanged.on((b) => {
@@ -237,6 +248,33 @@ export function SongPage() {
     setTrack(t)
     apiRef.current?.renderTracks([t])
     applyMix(mix, t, muteMine)
+  }
+  // volumes: geral e por faixa, salvos na música
+  const levels = song?.mix ?? { master: 1, tracks: {} }
+  // grava em cima do valor atual do banco (mexer rápido em dois sliders não perde nada)
+  const saveMix = (change: (m: { master: number; tracks: Record<number, number> }) => void) => {
+    if (!song?.id) return
+    void db.songs
+      .where('id')
+      .equals(song.id)
+      .modify((s) => {
+        const m = s.mix ?? { master: 1, tracks: {} }
+        change(m)
+        s.mix = m
+      })
+  }
+  const changeMaster = (v: number) => {
+    const api = apiRef.current
+    if (api) api.masterVolume = v
+    saveMix((m) => {
+      m.master = v
+    })
+  }
+  const changeTrackVolume = (t: AT.model.Track, v: number) => {
+    apiRef.current?.changeTrackVolume([t], v)
+    saveMix((m) => {
+      m.tracks[t.index] = v
+    })
   }
   const changeSpeed = (v: number) => {
     const s = Math.min(1.5, Math.max(0.25, Math.round(v * 100) / 100))
@@ -435,6 +473,13 @@ export function SongPage() {
                   </span>
                   <input type="range" min={0.25} max={1.5} step={0.05} value={speed} onChange={(e) => changeSpeed(Number(e.target.value))} className="w-full accent-[var(--color-enclosure)] mt-2" />
                 </label>
+                <label className="mt-3 block">
+                  <span className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 font-semibold"><Volume2 className="size-4" aria-hidden /> Volume geral</span>
+                    <span className="font-mono">{Math.round(levels.master * 100)}%</span>
+                  </span>
+                  <input type="range" min={0} max={1} step={0.05} value={levels.master} onChange={(e) => changeMaster(Number(e.target.value))} className="w-full accent-[var(--color-enclosure)] mt-2" aria-label="Volume geral" />
+                </label>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {[0.5, 0.75, 1].map((v) => (
                     <button key={v} onClick={() => changeSpeed(v)} className={`min-h-9 px-3 rounded-lg text-sm font-semibold ${speed === v ? 'bg-wood-700 text-pearl' : 'text-pearl-dim hover:bg-wood-800'}`}>
@@ -486,17 +531,32 @@ export function SongPage() {
                     <Segmented<View> label="Notação" value={view} onChange={changeView} options={[{ value: 'tab', label: 'Tab' }, { value: 'both', label: 'Tab + partitura' }]} />
                   </div>
                   <ul className="grid gap-1">
-                    {score.tracks.map((t) => (
-                      <li key={t.index}>
-                        <button
-                          onClick={() => selectTrack(t)}
-                          className={`w-full text-left min-h-10 px-3 rounded-lg text-sm ${track?.index === t.index ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}
-                        >
-                          {t.name || `Faixa ${t.index + 1}`}
-                          {t.isPercussion && <span className="ml-2 eyebrow">bateria</span>}
-                        </button>
-                      </li>
-                    ))}
+                    {score.tracks.map((t) => {
+                      const vol = levels.tracks[t.index] ?? 1
+                      return (
+                        <li key={t.index} className="grid grid-cols-[minmax(0,1fr)_120px_3rem] items-center gap-2">
+                          <button
+                            onClick={() => selectTrack(t)}
+                            className={`text-left min-h-10 px-3 rounded-lg text-sm truncate ${track?.index === t.index ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}
+                          >
+                            {t.name || `Faixa ${t.index + 1}`}
+                            {t.isPercussion && <span className="ml-2 eyebrow">bateria</span>}
+                          </button>
+                          <input
+                            type="range"
+                            min={0}
+                            max={2}
+                            step={0.05}
+                            value={vol}
+                            onChange={(e) => changeTrackVolume(t, Number(e.target.value))}
+                            className="w-full accent-[var(--color-enclosure)]"
+                            aria-label={`Volume de ${t.name || `Faixa ${t.index + 1}`}`}
+                            disabled={videoOn}
+                          />
+                          <span className="font-mono text-xs text-pearl-faint text-right">{Math.round(vol * 100)}%</span>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               )}
