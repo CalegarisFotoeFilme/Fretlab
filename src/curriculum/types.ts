@@ -115,6 +115,14 @@ export interface HearDegreeSpec {
   degrees: number[]
 }
 
+/** Ditado rítmico: o app toca um ritmo, a pessoa escolhe a partitura certa. */
+export interface RhythmDictationSpec {
+  type: 'rhythm-dictation'
+  bpm: number
+  /** padrões possíveis (notação de RhythmSpec); cada rodada sorteia um e mostra até 4 opções */
+  patterns: string[]
+}
+
 export type TheoryAsk = 'chord-of-degree' | 'degree-of-chord' | 'function' | 'relative' | 'spell-chord' | 'scale-notes' | 'progression'
 
 /** Perguntas de teoria geradas a cada rodada (tons e acordes sorteados). */
@@ -139,6 +147,7 @@ export type ExerciseSpec =
   | HearChordSpec
   | HearDegreeSpec
   | TheoryQuizSpec
+  | RhythmDictationSpec
 
 export type TeachBlock =
   | { kind: 'text'; text: string }

@@ -1,4 +1,4 @@
-import { FIGURE_BEATS, type HitResult, type RhythmEvent } from '../exercises/rhythmScore'
+import { eventBeats, type HitResult, type RhythmEvent } from '../exercises/rhythmScore'
 
 // Glifos SMuFL da fonte Bravura (a mesma usada pelo alphaTab).
 const G = {
@@ -6,7 +6,10 @@ const G = {
   rest: { whole: '', half: '', quarter: '', eighth: '', sixteenth: '' },
   flag8: '',
   flag16: '',
+  dot: '',
+  tuplet3: '',
 }
+const near = (a: number, b: number) => Math.abs(a - b) < 1e-6
 
 const GRADE_COLOR: Record<HitResult['grade'], string> = {
   perfect: 'var(--color-led-green)',
@@ -39,7 +42,7 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
   for (let i = 0, t = 0, onset = 0; i < events.length; i++) {
     const e = events[i]
     items.push({ ...e, beat: t, onset: e.rest ? -1 : onset++ })
-    t += FIGURE_BEATS[e.figure]
+    t += eventBeats(e)
   }
 
   // agrupa colcheias/semicolcheias do mesmo tempo para a barra de ligação
@@ -48,11 +51,13 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
     const short = !it.rest && (it.figure === 'eighth' || it.figure === 'sixteenth')
     const last = beamGroups.at(-1)
     const prev = last?.at(-1)
-    if (short && prev && Math.floor(prev.beat) === Math.floor(it.beat) && prev.beat + FIGURE_BEATS[prev.figure] === it.beat) last!.push(it)
+    if (short && prev && !prev.rest && Math.floor(prev.beat + 1e-6) === Math.floor(it.beat + 1e-6) && near(prev.beat + eventBeats(prev), it.beat) && !!prev.triplet === !!it.triplet) last!.push(it)
     else beamGroups.push([it])
   }
   const beamed = new Set(beamGroups.filter((g) => g.length > 1).flat())
   const stemTop = LINE_Y - SP * 3.5
+  // contagem: "1 e 2 e"; com semicolcheias "1 · e ·"; com tercinas "1 · ·"
+  const sub = events.some((e) => e.triplet) ? 3 : events.some((e) => e.figure === 'sixteenth' || (e.dotted && e.figure === 'eighth')) ? 4 : 2
   const headW = SP * 1.18
 
   return (
@@ -71,6 +76,7 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
           return (
             <text key={i} x={x} y={LINE_Y} fontFamily="Bravura" fontSize={FS} fill="var(--color-pearl-dim)">
               {G.rest[it.figure]}
+              {it.dotted ? ` ${G.dot}` : ''}
             </text>
           )
         }
@@ -82,6 +88,11 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
             <text x={x} y={LINE_Y} fontFamily="Bravura" fontSize={FS} stroke="none">
               {head}
             </text>
+            {it.dotted && (
+              <text x={x + headW + SP * 0.5} y={LINE_Y - SP * 0.5} fontFamily="Bravura" fontSize={FS} stroke="none">
+                {G.dot}
+              </text>
+            )}
             {hasStem && <line x1={x + headW - 0.6} x2={x + headW - 0.6} y1={LINE_Y - 2} y2={stemTop} strokeWidth={1.6} />}
             {flag && (
               <text x={x + headW - 1.4} y={stemTop} fontFamily="Bravura" fontSize={FS} stroke="none">
@@ -103,15 +114,28 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
             <g key={`b${gi}`} fill="var(--color-pearl)">
               <rect x={x1} y={stemTop} width={x2 - x1} height={SP * 0.5} />
               {both16 && <rect x={x1} y={stemTop + SP * 0.75} width={x2 - x1} height={SP * 0.5} />}
+              {/* semicolcheia junto de colcheia (pontuada): meia barra só nela */}
+              {!both16 &&
+                g.map((n, k) =>
+                  n.figure === 'sixteenth' ? (
+                    <rect key={k} x={k === g.length - 1 ? xOf(n.beat) + headW - 1.4 - SP * 1.2 : xOf(n.beat) + headW - 1.4} y={stemTop + SP * 0.75} width={SP * 1.2} height={SP * 0.5} />
+                  ) : null,
+                )}
+              {g[0].triplet && (
+                <text x={(x1 + x2) / 2} y={stemTop - SP * 0.6} textAnchor="middle" fontFamily="Bravura" fontSize={FS * 0.7}>
+                  {G.tuplet3}
+                </text>
+              )}
             </g>
           )
         })}
 
       {/* contagem "1 e 2 e" */}
       {showCounts &&
-        Array.from({ length: beats * 2 }, (_, i) => {
-          const beat = i / 2
-          const on = playhead !== null && Math.floor(playhead * 2) === i
+        Array.from({ length: beats * sub }, (_, i) => {
+          const beat = i / sub
+          const on = playhead !== null && Math.floor(playhead * sub) === i
+          const main = i % sub === 0
           return (
             <text
               key={`c${i}`}
@@ -119,11 +143,11 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
               y={108}
               textAnchor="middle"
               fontFamily="var(--font-mono)"
-              fontSize={i % 2 ? 11 : 13}
-              fontWeight={i % 2 ? 400 : 600}
-              fill={on ? 'var(--color-enclosure)' : i % 2 ? 'var(--color-pearl-faint)' : 'var(--color-pearl-dim)'}
+              fontSize={main ? 13 : 11}
+              fontWeight={main ? 600 : 400}
+              fill={on ? 'var(--color-enclosure)' : main ? 'var(--color-pearl-dim)' : 'var(--color-pearl-faint)'}
             >
-              {i % 2 ? 'e' : beat + 1}
+              {main ? Math.floor(beat) + 1 : sub === 2 || (sub === 4 && i % sub === 2) ? 'e' : '·'}
             </text>
           )
         })}

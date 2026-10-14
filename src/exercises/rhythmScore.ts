@@ -4,6 +4,10 @@ export type Figure = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth'
 export interface RhythmEvent {
   figure: Figure
   rest?: boolean
+  /** figura pontuada: vale 1,5× */
+  dotted?: boolean
+  /** parte de uma tercina: vale 2/3 da figura */
+  triplet?: boolean
 }
 
 /** Duração em tempos (semínima = 1). */
@@ -15,18 +19,22 @@ export const FIGURE_LABEL: Record<Figure, string> = {
   whole: 'Semibreve', half: 'Mínima', quarter: 'Semínima', eighth: 'Colcheia', sixteenth: 'Semicolcheia',
 }
 
+/** Duração do evento em tempos, com ponto e tercina. */
+export const eventBeats = (e: RhythmEvent) => FIGURE_BEATS[e.figure] * (e.dotted ? 1.5 : 1) * (e.triplet ? 2 / 3 : 1)
+
 /** Posição (em tempos) de cada ataque não-pausa. */
 export function onsetBeats(events: RhythmEvent[]): number[] {
   const out: number[] = []
   let t = 0
   for (const e of events) {
     if (!e.rest) out.push(t)
-    t += FIGURE_BEATS[e.figure]
+    t += eventBeats(e)
   }
   return out
 }
 
-export const totalBeats = (events: RhythmEvent[]) => events.reduce((s, e) => s + FIGURE_BEATS[e.figure], 0)
+/** Total em tempos (arredondado para absorver o 2/3 das tercinas). */
+export const totalBeats = (events: RhythmEvent[]) => Math.round(events.reduce((s, e) => s + eventBeats(e), 0) * 1000) / 1000
 
 export interface HitResult {
   expectedMs: number

@@ -143,14 +143,38 @@ export function hearIntervalRound(inst: Instrument, intervals: number[], mode: '
 
 // ---------- Ritmo ----------
 
+export interface DictationRound {
+  answer: string
+  options: string[]
+}
+
+/** Sorteia o padrão tocado e até 3 alternativas diferentes (embaralhadas). */
+export function dictationRound(patterns: string[], prev?: DictationRound, rng: Rng = Math.random): DictationRound {
+  const unique = [...new Set(patterns)]
+  let answer = pick(unique, rng)
+  if (prev && unique.length > 1) while (answer === prev.answer) answer = pick(unique, rng)
+  const others = shuffle(unique.filter((p) => p !== answer), rng).slice(0, 3)
+  return { answer, options: shuffle([answer, ...others], rng) }
+}
+
 const FIG: Record<string, Figure> = { w: 'whole', h: 'half', q: 'quarter', e: 'eighth', s: 'sixteenth' }
 
+/**
+ * Notação compacta de ritmo: w h q e s (figuras), prefixo r = pausa, sufixo . = pontuada,
+ * prefixo t = tercina (ex.: "te te te" = tercina de colcheias). Ex.: "q e. s te te te rq".
+ */
 export function parsePattern(src: string): RhythmEvent[] {
   return src.trim().split(/\s+/).map((tok) => {
-    const rest = tok.startsWith('r')
-    const f = FIG[rest ? tok.slice(1) : tok]
+    let t = tok
+    const rest = t.startsWith('r')
+    if (rest) t = t.slice(1)
+    const triplet = t.startsWith('t')
+    if (triplet) t = t.slice(1)
+    const dotted = t.endsWith('.')
+    if (dotted) t = t.slice(0, -1)
+    const f = FIG[t]
     if (!f) throw new Error(`Figura inválida: ${tok}`)
-    return rest ? { figure: f, rest: true } : { figure: f }
+    return { figure: f, ...(rest && { rest }), ...(dotted && { dotted }), ...(triplet && { triplet }) }
   })
 }
 

@@ -4,7 +4,7 @@ import { makeInstrument, pcAt } from '../theory/instrument'
 import { degreeChordMidis, noteSetRound, setPcs, theoryQuestion, findNoteRound, hearIntervalRound, intervalOptions, intervalRound, intervalTargets, nameNoteRound, parsePattern, HAND_SPAN } from './generate'
 import { midiAt } from '../theory/instrument'
 import { pcName } from '../theory/notes'
-import { totalBeats } from './rhythmScore'
+import { onsetBeats, totalBeats } from './rhythmScore'
 
 const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
 
@@ -29,6 +29,23 @@ describe('geradores', () => {
       expect(r.options).toContain(r.pc)
       expect(new Set(r.options).size).toBe(4)
     }
+  })
+})
+
+describe('ritmo II', () => {
+  it('lê pontuadas e tercinas', () => {
+    const e = parsePattern('q. e te te te rs s.')
+    expect(e.map((x) => [x.figure, !!x.dotted, !!x.triplet, !!x.rest])).toEqual([
+      ['quarter', true, false, false],
+      ['eighth', false, false, false],
+      ['eighth', false, true, false],
+      ['eighth', false, true, false],
+      ['eighth', false, true, false],
+      ['sixteenth', false, false, true],
+      ['sixteenth', true, false, false],
+    ])
+    // ataques: 0, 1.5, 2, 2.333, 2.667 (a pausa não conta), 3.25
+    expect(onsetBeats(parsePattern('q. e te te te rs s.')).map((b) => Math.round(b * 1000) / 1000)).toEqual([0, 1.5, 2, 2.333, 2.667, 3.25])
   })
 })
 
@@ -119,6 +136,10 @@ describe('currículo', () => {
   it('todos os exercícios são válidos', () => {
     for (const l of ALL_LESSONS) {
       const ex = l.exercise
+      if (ex.type === 'rhythm-dictation') {
+        ex.patterns.forEach((p) => expect(totalBeats(parsePattern(p)), `${l.id}: ${p}`).toBe(4))
+        expect(new Set(ex.patterns).size, l.id).toBeGreaterThanOrEqual(4)
+      }
       if (ex.type === 'rhythm') {
         ex.patterns.forEach((p) => expect(totalBeats(parsePattern(p)), `${l.id}: ${p}`).toBe(4))
       }

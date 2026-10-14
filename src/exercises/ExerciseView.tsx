@@ -8,6 +8,7 @@ import { NoteSet } from './NoteSet'
 import { PlayInterval } from './PlayInterval'
 import { Quiz } from './Quiz'
 import { Rhythm } from './Rhythm'
+import { RhythmDictation } from './RhythmDictation'
 import { TheoryQuiz } from './TheoryQuiz'
 
 /** Escolhe o componente do exercício pelo tipo (usado nas lições e no Treino do Dia). */
@@ -36,5 +37,7 @@ export function ExerciseView({ spec, round, onRoundDone }: { spec: ExerciseSpec;
       return <HearDegree spec={spec} {...props} />
     case 'theory-quiz':
       return <TheoryQuiz spec={spec} {...props} />
+    case 'rhythm-dictation':
+      return <RhythmDictation spec={spec} {...props} />
   }
 }

@@ -6,6 +6,7 @@ import { world4 } from './world4-scales'
 import { world5 } from './world5-chords'
 import { world6 } from './world6-caged'
 import { world7 } from './world7-harmonic-field'
+import { world8 } from './world8-rhythm2'
 
 export const WORLDS: World[] = [
   world1,
@@ -15,6 +16,7 @@ export const WORLDS: World[] = [
   world5,
   world6,
   world7,
+  world8,
 ]
 
 export const ALL_LESSONS: Lesson[] = WORLDS.flatMap((w) => w.lessons)
