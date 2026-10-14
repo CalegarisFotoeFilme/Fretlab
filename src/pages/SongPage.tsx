@@ -56,7 +56,22 @@ export function SongPage() {
   const videoHost = useRef<HTMLDivElement>(null)
   const original = useOriginalAudio(apiRef, videoHost, song?.songsterrUrl)
   const videoOn = original.state.status === 'on' || original.state.status === 'loading'
-  const [videoSmall, setVideoSmall] = useState(false)
+  // vídeo: grande, pequeno ou oculto (só o som; lembrado neste navegador)
+  const [videoSize, setVideoSize] = useState<'big' | 'small' | 'hidden'>(() => {
+    try {
+      return (localStorage.getItem('fretlab.player.video') as 'big' | 'small' | 'hidden' | null) ?? 'small'
+    } catch {
+      return 'small'
+    }
+  })
+  const changeVideoSize = (v: 'big' | 'small' | 'hidden') => {
+    setVideoSize(v)
+    try {
+      localStorage.setItem('fretlab.player.video', v)
+    } catch {
+      // sem armazenamento local: só não lembra
+    }
+  }
   const [mix, setMix] = useState<Mix>('band')
   // controles flutuantes: expandidos ou só a barra compacta (lembra a escolha neste navegador)
   const [expanded, setExpanded] = useState(() => {
@@ -279,6 +294,7 @@ export function SongPage() {
     t: toggleMute,
     w: toggleWait,
     c: toggleExpanded,
+    v: () => videoOn && changeVideoSize(videoSize === 'hidden' ? 'small' : 'hidden'),
     o: () => {
       if (!syncAvailable() || !song?.songsterrUrl) return
       void (videoOn ? original.disable() : original.enable())
@@ -344,13 +360,27 @@ export function SongPage() {
         </div>
 
         <div
-          className={`absolute left-4 top-24 z-20 aspect-video overflow-hidden rounded-xl border border-wood-700 bg-black shadow-2xl ${videoOn ? '' : 'hidden'} ${videoSmall ? 'w-64' : 'w-[min(520px,45%)]'}`}
+          // oculto = fora da tela (não some do DOM: o YouTube continua tocando o som)
+          className={`absolute z-20 aspect-video overflow-hidden rounded-xl border border-wood-700 bg-black shadow-2xl ${videoOn ? '' : 'hidden'} ${
+            videoSize === 'hidden' ? '-left-[10000px] top-0 w-64' : videoSize === 'small' ? 'left-4 top-24 w-64' : 'left-4 top-24 w-[min(520px,45%)]'
+          }`}
+          aria-hidden={videoSize === 'hidden'}
         >
           <div ref={videoHost} className="size-full" />
-          <button onClick={() => setVideoSmall((v) => !v)} className="absolute right-1.5 top-1.5 rounded-md bg-black/70 px-2 py-0.5 text-xs text-pearl" aria-label={videoSmall ? 'Aumentar o vídeo' : 'Diminuir o vídeo'}>
-            {videoSmall ? 'aumentar' : 'diminuir'}
-          </button>
+          <div className="absolute right-1.5 top-1.5 flex gap-1">
+            <button onClick={() => changeVideoSize(videoSize === 'big' ? 'small' : 'big')} className="rounded-md bg-black/70 px-2 py-0.5 text-xs text-pearl">
+              {videoSize === 'big' ? 'diminuir' : 'aumentar'}
+            </button>
+            <button onClick={() => changeVideoSize('hidden')} className="rounded-md bg-black/70 px-2 py-0.5 text-xs text-pearl" aria-label="Ocultar o vídeo (o som continua)">
+              ocultar
+            </button>
+          </div>
         </div>
+        {videoOn && videoSize === 'hidden' && (
+          <button onClick={() => changeVideoSize('small')} className="absolute left-4 top-24 z-20 rounded-lg border border-wood-700 bg-wood-900/95 px-3 py-1.5 text-xs font-semibold text-pearl-dim hover:text-pearl shadow-xl">
+            Mostrar o vídeo <Kbd>V</Kbd>
+          </button>
+        )}
 
         <div className="fixed inset-x-2 bottom-[4.75rem] z-20 md:absolute md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[min(820px,calc(100%-2rem))]">
           {expanded && (

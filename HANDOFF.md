@@ -138,6 +138,7 @@
   - os pontos viram `FlatSyncPoint` pela ordem do `api.tickCache.masterBars`, e o alphaTab passa para `PlayerMode.EnabledExternalMedia`, com o YouTube como `handler` e `updatePosition` a cada 40 ms;
   - armadilha: `seekTo` num vídeo parado faz o YouTube tocar. O handler pausa de novo e ignora o "PLAYING" por 800 ms;
   - armadilha: chame `api.stop()` antes de destruir o player do YouTube.
+  - Vídeo grande, pequeno ou **oculto** (tecla V; só o som continua). O oculto fica fora da tela, sem sair do DOM, para o YouTube não pausar. Preferência no `localStorage`.
   - Em desenvolvimento dá para testar no navegador injetando `sessionStorage['fretlab.syncFixture']` com um `SongsterrSync` em JSON.
 
 - `src-tauri/`: Tauri 2. Comandos Rust:
