@@ -7,6 +7,7 @@ O FretLab organiza o estudo do jeito que métodos consagrados de guitarra e baix
 | **Desi Serna**, *Guitar Theory for Dummies* | Teoria sempre **no braço**, não no papel: primeiro as notas nas cordas graves, depois formas de intervalo, a escala maior em padrões, CAGED e o campo harmônico aplicado a músicas reais. | Mundo 1 (O Braço), Mundos 3–7, painel "Teoria desta música" |
 | **William Leavitt**, *A Modern Method for Guitar* (Berklee) | Progressão **gradual e cumulativa**: um elemento novo por vez, leitura rítmica com metrônomo e estudo por **posições** (casas 1–4, 5–8…). | Mundo 2 (Ritmo I), futuros exercícios por posição, Ritmo II |
 | **Ralph Denyer**, *The Guitar Handbook* | Acordes **construídos pela fórmula** (1-3-5, 1-b3-5…), em vez de decorados como desenhos, e o braço como referência visual. | Explorador do braço (fórmulas e graus), Mundo 5 (Acordes e arpejos) |
+| **Troy Nelson**, *Guitar Aerobics* | **Treino diário curto e progressivo**: um exercício por dia, a dificuldade sobe semana a semana e cada exercício trabalha uma técnica aplicada à teoria (intervalos, escalas, arpejos), sempre com metrônomo e andamento alvo. | Treino do Dia, exercícios de técnica dos mundos de Intervalos, Escalas e Arpejos, metas de BPM |
 | ***Guitar All-in-One For Dummies*** (7 livros em 1) | **Visão ampla**: técnica, leitura, teoria e repertório andando juntos. | Ordem dos mundos e integração com a biblioteca de músicas |
 
 ## Princípios
@@ -23,7 +24,7 @@ O FretLab organiza o estudo do jeito que métodos consagrados de guitarra e baix
 |---|---|---|
 | 1 | O Braço | ✅ 11 lições |
 | 2 | Ritmo I | ✅ 7 lições |
-| 3 | Intervalos | em construção |
+| 3 | Intervalos | ✅ 12 lições |
 | 4 | Escalas | em construção |
 | 5 | Acordes e arpejos | em construção |
 | 6 | CAGED (guitarra) / mapas de arpejo (baixo) | em construção |

@@ -1,13 +1,14 @@
 import type { Lesson, World } from './types'
 import { world1 } from './world1-fretboard'
 import { world2 } from './world2-rhythm'
+import { world3 } from './world3-intervals'
 
 const soon = (id: string, title: string, tagline: string, approach: string): World => ({ id, title, tagline, approach, lessons: [], comingSoon: true })
 
 export const WORLDS: World[] = [
   world1,
   world2,
-  soon('intervalos', 'Intervalos', 'A distância entre duas notas', 'Formas de intervalo no braço, como em Desi Serna.'),
+  world3,
   soon('escalas', 'Escalas', 'Maior, menor e pentatônicas', 'Padrões de Serna + estudo por posições de Leavitt.'),
   soon('acordes', 'Acordes e arpejos', 'Tríades e tétrades, nota por nota', 'Construção pela fórmula, como em The Guitar Handbook (Ralph Denyer).'),
   soon('caged', 'CAGED e mapas', 'Desenhos que cobrem o braço inteiro', 'Sistema CAGED como apresentado por Desi Serna.'),
@@ -25,24 +26,9 @@ export function findLesson(id: string) {
 }
 
 /**
- * Regras de desbloqueio: dentro do mundo, a lição anterior precisa de 1 estrela.
- * Cada mundo abre quando o mundo anterior tem pelo menos 3 lições com estrela,
- * para dar para alternar braço e ritmo cedo.
+ * Tudo fica aberto desde o início (escolha do usuário: a trilha é um roteiro, não uma corrente).
+ * A próxima lição sugerida é a primeira, na ordem da trilha, ainda sem estrela.
  */
-export function isUnlocked(lessonId: string, starsOf: (id: string) => number) {
-  const found = findLesson(lessonId)
-  if (!found) return false
-  const { world, index } = found
-  const wi = WORLDS.indexOf(world)
-  if (wi > 0) {
-    const prev = WORLDS[wi - 1]
-    const done = prev.lessons.filter((l) => starsOf(l.id) > 0).length
-    if (done < Math.min(3, prev.lessons.length)) return false
-  }
-  return index === 0 || starsOf(world.lessons[index - 1].id) > 0
-}
-
-/** Próxima lição a fazer: a primeira desbloqueada e ainda sem estrela. */
 export function nextLesson(starsOf: (id: string) => number) {
-  return ALL_LESSONS.find((l) => isUnlocked(l.id, starsOf) && starsOf(l.id) === 0) ?? null
+  return ALL_LESSONS.find((l) => starsOf(l.id) === 0) ?? null
 }

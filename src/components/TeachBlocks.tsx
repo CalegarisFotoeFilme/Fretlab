@@ -1,12 +1,12 @@
 import { Lightbulb, Volume2 } from 'lucide-react'
-import { playNote } from '../audio/engine'
+import { playInterval, playNote } from '../audio/engine'
 import type { TeachBlock } from '../curriculum/types'
-import { parsePattern, resolvePool, resolveStrings } from '../exercises/generate'
+import { HAND_SPAN, intervalTargets, parsePattern, resolvePool, resolveStrings } from '../exercises/generate'
 import { previewPattern } from '../exercises/Rhythm'
 import { FIGURE_BEATS, FIGURE_LABEL, type Figure } from '../exercises/rhythmScore'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { findPositions, midiAt, stringNumber } from '../theory/instrument'
-import { mod12 } from '../theory/notes'
+import { INTERVALS, mod12 } from '../theory/notes'
 import { Fretboard } from './Fretboard'
 import { RhythmStaff } from './RhythmStaff'
 import { Button } from './ui'
@@ -124,6 +124,47 @@ function Block({ block }: { block: TeachBlock }) {
             <Button variant="secondary" onClick={() => previewPattern(events, 70, inst.openMidi[0] + 12)}>
               <Volume2 className="size-4" aria-hidden /> Ouvir
             </Button>
+          </figcaption>
+        </figure>
+      )
+    }
+    case 'interval': {
+      // fundamental numa casa onde cabem todas as formas para os dois lados
+      const root = { string: Math.min(block.string ?? 0, inst.openMidi.length - 1), fret: 3 }
+      const rootMidi = midiAt(inst, root)
+      const iv = INTERVALS[block.semitones]
+      // forma principal: a mais perto da fundamental (corda solta e mesma corda contam como mais longe);
+      // as outras posições aparecem tracejadas, como alternativas
+      const dist = (t: { string: number; fret: number }) => Math.abs(t.fret - root.fret) + (t.string === root.string ? 0.5 : 0) + (t.fret === 0 ? 2 : 0)
+      const targets = intervalTargets(inst, root, block.semitones, HAND_SPAN + 1).sort((a, b) => dist(a) - dist(b))
+      return (
+        <figure className="panel p-3">
+          <div className="flex items-baseline justify-between gap-3 px-1">
+            <p className="font-display text-2xl font-black uppercase">{iv.name}</p>
+            <p className="font-mono text-sm text-pearl-dim">
+              {iv.short} · {block.semitones} {block.semitones === 1 ? 'semitom' : 'semitons'}
+            </p>
+          </div>
+          <div className="-mx-3 overflow-x-auto px-3">
+            <Fretboard
+              inst={inst}
+              from={0}
+              to={Math.min(inst.frets, 10)}
+              markers={[{ ...root, tone: 'root', label: 'R' }, ...targets.map((t, i) => ({ ...t, tone: i === 0 ? ('neutral' as const) : ('ghost' as const), label: iv.short }))]}
+              leftHanded={leftHanded}
+              onPick={(p) => playNote(midiAt(inst, p))}
+            />
+          </div>
+          <figcaption className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-pearl-dim">
+            <span className="flex-1 min-w-60">{block.caption}</span>
+            <span className="flex gap-1.5">
+              <Button variant="secondary" onClick={() => playInterval(rootMidi, block.semitones)}>
+                <Volume2 className="size-4" aria-hidden /> Separadas
+              </Button>
+              <Button variant="secondary" onClick={() => playInterval(rootMidi, block.semitones, true)}>
+                <Volume2 className="size-4" aria-hidden /> Juntas
+              </Button>
+            </span>
           </figcaption>
         </figure>
       )

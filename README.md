@@ -6,7 +6,7 @@ App pessoal de estudo de teoria musical para **baixo e guitarra**, no estilo Sim
 
 ## O que já tem
 
-- **Trilha gamificada**: mundos que vão sendo desbloqueados, com estrelas (60/80/95% de acerto), XP, nível e sequência de dias.
+- **Trilha gamificada**: mundos em ordem sugerida (tudo aberto desde o início), com estrelas (60/80/95% de acerto), XP, nível e sequência de dias.
   - **O Braço** (11 lições): cordas soltas, alfabeto musical, notas por corda, casa 12, sustenidos/bemóis, oitavas e o desafio final.
   - **Ritmo I** (7 lições): pulso, figuras, colcheias, pausas e ritmo tocado no instrumento.
 - **Exercícios**: achar a nota (clique ou tocando), nomear a nota, quiz e ritmo com metrônomo (avaliação em ms).
@@ -59,7 +59,7 @@ Coloque o container atrás do seu proxy com HTTPS (Caddy, Traefik, nginx…), po
 src/theory      notas, intervalos, escalas, acordes, campo harmônico, braço, tonalidade
 src/audio       síntese (Karplus-Strong), metrônomo, entrada de áudio e detecção de nota
 src/exercises   tipos de exercício e geradores
-src/curriculum  lições (dados) e regras de desbloqueio
+src/curriculum  lições (dados) e próxima lição sugerida
 src/progress    IndexedDB, pontuação, XP, sequência, ajustes
 src/library     alphaTab e conversor MIDI → Guitar Pro
 src/components  braço SVG, pauta rítmica, UI base

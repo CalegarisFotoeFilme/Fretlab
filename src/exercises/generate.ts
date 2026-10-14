@@ -1,5 +1,5 @@
 import type { FretRange, NotePool, StringSel } from '../curriculum/types'
-import { findPositions, pcAt, type FretPos, type Instrument } from '../theory/instrument'
+import { findPositions, midiAt, pcAt, type FretPos, type Instrument } from '../theory/instrument'
 import { NATURALS, mod12, type PitchClass } from '../theory/notes'
 import type { Figure, RhythmEvent } from './rhythmScore'
 
@@ -72,6 +72,70 @@ export function nameNoteRound(
     return { pos, pc, options: shuffle([pc, ...distractors], rng) }
   }
   throw new Error('Nenhuma posição disponível para esse exercício')
+}
+
+// ---------- Intervalos ----------
+
+/** Quantas casas a mão alcança a partir da fundamental, para a forma ser tocável sem mudar de posição. */
+export const HAND_SPAN = 4
+
+/** Posições do intervalo (para cima) ao alcance da mão: na mesma corda ou nas mais agudas. */
+export function intervalTargets(inst: Instrument, root: FretPos, semis: number, span = HAND_SPAN): FretPos[] {
+  const want = midiAt(inst, root) + semis
+  return inst.openMidi.flatMap((open, string) => {
+    const fret = want - open
+    const ok = string >= root.string && fret >= 0 && fret <= inst.frets && Math.abs(fret - root.fret) <= span
+    return ok ? [{ string, fret }] : []
+  })
+}
+
+export interface IntervalRound {
+  root: FretPos
+  semis: number
+  /** onde o intervalo pode ser tocado a partir dessa fundamental */
+  targets: FretPos[]
+}
+
+/** Sorteia fundamental e intervalo com pelo menos uma forma tocável, evitando repetir a rodada anterior. */
+export function intervalRound(
+  inst: Instrument, intervals: number[], sel: StringSel, frets: FretRange, prev?: IntervalRound, rng: Rng = Math.random,
+): IntervalRound {
+  const strings = resolveStrings(inst, sel)
+  for (let tries = 0; tries < 80; tries++) {
+    const semis = pick(intervals, rng)
+    const root = { string: pick(strings, rng), fret: frets.from + Math.floor(rng() * (frets.to - frets.from + 1)) }
+    const targets = intervalTargets(inst, root, semis)
+    if (!targets.length) continue
+    if (prev && prev.semis === semis && prev.root.string === root.string && prev.root.fret === root.fret && tries < 79) continue
+    return { root, semis, targets }
+  }
+  throw new Error('Nenhum intervalo tocável para esse exercício')
+}
+
+/** Opções de resposta: a certa + vizinhas (as que mais confundem), no máximo `max`, em ordem crescente. */
+export function intervalOptions(answer: number, pool: number[], max = 6, rng: Rng = Math.random): number[] {
+  if (pool.length <= max) return [...pool].sort((a, b) => a - b)
+  const others = shuffle(pool.filter((p) => p !== answer), rng).sort((a, b) => Math.abs(a - answer) - Math.abs(b - answer))
+  return [answer, ...others.slice(0, max - 1)].sort((a, b) => a - b)
+}
+
+export interface HearIntervalRound {
+  root: number // midi
+  semis: number
+  harmonic: boolean
+  options: number[]
+}
+
+/** Fundamental numa região confortável de ouvir para o instrumento (um pouco acima da corda mais grave). */
+export function hearIntervalRound(inst: Instrument, intervals: number[], mode: 'melodic' | 'harmonic' | 'both', prev?: HearIntervalRound, rng: Rng = Math.random): HearIntervalRound {
+  const low = Math.max(inst.openMidi[0] + 5, 40)
+  for (let tries = 0; ; tries++) {
+    const semis = pick(intervals, rng)
+    if (prev && prev.semis === semis && intervals.length > 1 && tries < 20) continue
+    const root = low + Math.floor(rng() * 10)
+    const harmonic = mode === 'harmonic' || (mode === 'both' && rng() < 0.5)
+    return { root, semis, harmonic, options: intervalOptions(semis, intervals, 6, rng) }
+  }
 }
 
 // ---------- Ritmo ----------

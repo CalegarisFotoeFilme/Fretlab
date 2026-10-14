@@ -2,7 +2,7 @@ import { Lock } from 'lucide-react'
 import { Link } from 'react-router'
 import { Logo } from '../components/AppShell'
 import { LinkButton, Meter, Stars } from '../components/ui'
-import { WORLDS, isUnlocked, nextLesson } from '../curriculum'
+import { WORLDS, nextLesson } from '../curriculum'
 import type { World } from '../curriculum/types'
 import { useProgress, type ProgressSummary } from '../progress/progress'
 import { DOUBLE_INLAYS, INLAY_FRETS, INSTRUMENT_LABEL } from '../theory/instrument'
@@ -121,14 +121,13 @@ function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: num
         {world.lessons.map((l, i) => {
           const fret = i + 1
           const stars = starsOf(l.id)
-          const unlocked = isUnlocked(l.id, starsOf)
           const current = l.id === nextId
           const content = (
             <>
               <div className="relative w-14 shrink-0 self-stretch flex items-center justify-center" aria-hidden>
                 <div className="absolute bottom-0 inset-x-0 h-[3px] bg-nickel/80" />
                 {INLAY_FRETS.includes(fret) && !current && stars === 0 && (
-                  <div className={`flex gap-3 ${unlocked ? '' : 'opacity-70'}`}>
+                  <div className="flex gap-3">
                     <span className="size-3 rounded-full bg-pearl/80" />
                     {DOUBLE_INLAYS.includes(fret) && <span className="size-3 rounded-full bg-pearl/80" />}
                   </div>
@@ -145,24 +144,18 @@ function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: num
               </div>
               <div className="flex-1 min-w-0 py-4 pl-4 pr-2 border-b border-wood-700/50">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className={`font-sans text-base font-bold leading-snug ${unlocked ? 'text-pearl' : 'text-pearl-faint'}`}>{l.title}</h3>
-                  {unlocked ? <Stars value={stars} /> : <Lock className="size-4 text-pearl-faint shrink-0" aria-label="Bloqueada" />}
+                  <h3 className="font-sans text-base font-bold leading-snug text-pearl">{l.title}</h3>
+                  <Stars value={stars} />
                 </div>
-                <p className={`text-sm mt-0.5 ${unlocked ? 'text-pearl-dim' : 'text-pearl-faint'}`}>{l.summary}</p>
+                <p className="text-sm mt-0.5 text-pearl-dim">{l.summary}</p>
               </div>
             </>
           )
           return (
             <li key={l.id} className="relative">
-              {unlocked ? (
-                <Link to={`/licao/${l.id}`} className="flex items-stretch rounded-r-xl hover:bg-wood-900/70 transition-colors" aria-current={current ? 'step' : undefined}>
-                  {content}
-                </Link>
-              ) : (
-                <div className="flex items-stretch" aria-disabled>
-                  {content}
-                </div>
-              )}
+              <Link to={`/licao/${l.id}`} className="flex items-stretch rounded-r-xl hover:bg-wood-900/70 transition-colors" aria-current={current ? 'step' : undefined}>
+                {content}
+              </Link>
             </li>
           )
         })}

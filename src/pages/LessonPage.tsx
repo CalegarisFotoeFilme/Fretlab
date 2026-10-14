@@ -6,12 +6,15 @@ import { uiSound } from '../audio/engine'
 import { TeachBlocks } from '../components/TeachBlocks'
 import { Button, LinkButton, Meter, Stars } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
-import { findLesson, isUnlocked, nextLesson } from '../curriculum'
+import { findLesson, nextLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { FindNote } from '../exercises/FindNote'
 import { NameNote } from '../exercises/NameNote'
 import { Quiz } from '../exercises/Quiz'
 import { Rhythm } from '../exercises/Rhythm'
+import { PlayInterval } from '../exercises/PlayInterval'
+import { NameInterval } from '../exercises/NameInterval'
+import { HearInterval } from '../exercises/HearInterval'
 import { recordAttempt, useProgress, type AttemptResult } from '../progress/progress'
 
 type Phase = 'teach' | 'play' | 'result'
@@ -19,19 +22,10 @@ type Phase = 'teach' | 'play' | 'result'
 export function LessonPage() {
   const { id = '' } = useParams()
   const found = findLesson(id)
-  const progress = useProgress()
   if (!found) {
     return (
       <div className="p-8 text-center">
         <p>Essa lição não existe.</p>
-        <LinkButton to="/" className="mt-4">Voltar à trilha</LinkButton>
-      </div>
-    )
-  }
-  if (progress && !isUnlocked(id, (l) => progress.lessons.get(l)?.stars ?? 0)) {
-    return (
-      <div className="p-8 text-center max-w-md mx-auto">
-        <p className="text-lg">Essa lição ainda está bloqueada. Complete a anterior para liberar.</p>
         <LinkButton to="/" className="mt-4">Voltar à trilha</LinkButton>
       </div>
     )
@@ -127,6 +121,9 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
           {ex.type === 'name-note' && <NameNote spec={ex} {...props} />}
           {ex.type === 'quiz' && <Quiz spec={ex} {...props} />}
           {ex.type === 'rhythm' && <Rhythm spec={ex} {...props} />}
+          {ex.type === 'play-interval' && <PlayInterval spec={ex} {...props} />}
+          {ex.type === 'name-interval' && <NameInterval spec={ex} {...props} />}
+          {ex.type === 'hear-interval' && <HearInterval spec={ex} {...props} />}
           <Button variant="ghost" className="mt-6 self-start" onClick={() => setPhase('teach')}>
             <ArrowLeft className="size-4" aria-hidden /> Rever explicação
           </Button>

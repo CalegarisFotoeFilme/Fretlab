@@ -12,7 +12,7 @@
 - Ambiente principal: **macOS, monitor ultrawide 2560×1080, mouse e teclado**. O toque deve continuar funcionando, mas é secundário.
 - Usa uma **pedaleira como interface de áudio USB**, que serve de entrada para a detecção de notas.
 - Gosta de receber **prints/preview** da evolução para poder sugerir mudanças. Mande screenshots depois de mudanças visuais.
-- Metodologia inspirada em Desi Serna (*Guitar Theory for Dummies*), William Leavitt (*Modern Method for Guitar*), Ralph Denyer (*The Guitar Handbook*) e *Guitar All-in-One for Dummies*. Use só a **abordagem**: **nunca copie texto** dos livros (ver `docs/METODOLOGIA.md`).
+- Metodologia inspirada em Desi Serna (*Guitar Theory for Dummies*), William Leavitt (*Modern Method for Guitar*), Ralph Denyer (*The Guitar Handbook*), *Guitar All-in-One for Dummies* e Troy Nelson (*Guitar Aerobics*: treino diário curto e progressivo, com metrônomo). Use só a **abordagem**: **nunca copie texto** dos livros (ver `docs/METODOLOGIA.md`).
 - Pode hospedar no próprio servidor (Docker + nginx prontos). O microfone exige HTTPS ou `localhost`.
 
 ## Primeiros passos (faça automaticamente)
@@ -28,10 +28,11 @@
 ## Estado atual
 
 **Funciona (testado):**
-- Trilha com 2 mundos completos:
+- Trilha com 3 mundos completos:
   - **O Braço**: 11 lições;
-  - **Ritmo I**: 7 lições.
-- Gamificação: estrelas (60/80/95%), XP, nível, dias seguidos e desbloqueio, tudo salvo em IndexedDB.
+  - **Ritmo I**: 7 lições;
+  - **Intervalos**: 12 lições, com três exercícios novos: tocar o intervalo (no braço ou no instrumento), nomear pela forma e identificar de ouvido (melódico e harmônico). Na explicação, um bloco mostra a forma de cada intervalo no braço.
+- Gamificação: estrelas (60/80/95%), XP, nível e dias seguidos, tudo salvo em IndexedDB. **Tudo desbloqueado desde o início**, por pedido do usuário: a trilha só sugere a próxima lição (a primeira sem estrela).
 - Exercícios:
   - achar a nota, clicando ou tocando;
   - nomear a nota;
@@ -70,17 +71,15 @@
 ## Próximos passos (prioridade)
 
 1. Validar no Mac os itens "não testados" acima e corrigir o que aparecer.
-2. **Fase 2 do currículo**: os Mundos 3–7 já aparecem como "em construção" em `src/curriculum/index.ts`.
-   - **Intervalos** (formas no braço à la Serna, reconhecimento auditivo). Precisa de novos tipos de exercício: "tocar o intervalo" e "identificar o intervalo ouvido".
+2. **Fase 2 do currículo**: Intervalos pronto; os Mundos 4–7 aparecem como "em construção" em `src/curriculum/index.ts`.
    - **Escalas**: padrões e estudo por posição à la Leavitt.
    - **Acordes e arpejos**: construção pela fórmula à la Denyer.
    - **CAGED** na guitarra e mapas de arpejo no baixo.
    - **Campo harmônico**, ligado à biblioteca de músicas.
-3. **Treino do Dia** com repetição espaçada (SRS) de fatos errados: nota na corda/casa, intervalos, graus.
+3. **Treino do Dia** à la *Guitar Aerobics*: um treino curto e progressivo por dia, com metrônomo e meta de BPM, mais repetição espaçada (SRS) dos fatos errados (nota na corda/casa, intervalos, graus).
 4. **Modo espera** no player: o app pausa até você tocar a nota certa, estilo Simply Piano. Usa `input` + o cursor do alphaTab.
-5. Bateria no conversor MIDI (faixa de percussão do alphaTab) para ter acompanhamento completo.
-6. Ritmo II (semicolcheias, tercinas, síncopes, ditado) e leitura de partitura (VexFlow).
-7. Opcional: casco desktop com **Tauri** para abrir o Songsterr embutido. O site bloqueia iframe (`X-Frame-Options: Deny`).
+5. Ritmo II (semicolcheias, tercinas, síncopes, ditado) e leitura de partitura (VexFlow).
+6. Opcional: casco desktop com **Tauri** para abrir o Songsterr embutido. O site bloqueia iframe (`X-Frame-Options: Deny`).
 
 ## Mapa do código
 
@@ -89,7 +88,7 @@
 | `src/theory` | notas, intervalos, escalas, acordes, campo harmônico (`notes.ts`), instrumento/braço (`instrument.ts`), estimativa de tom (`key.ts`) |
 | `src/audio` | `engine.ts`: síntese Karplus-Strong, metrônomo, `input` (getUserMedia sem filtros de voz); `pitch.ts`: pitchy + estabilizador; `useInput.ts` |
 | `src/exercises` | componentes de exercício + `generate.ts` (rodadas) + `rhythmScore.ts` (pontuação do ritmo) |
-| `src/curriculum` | lições como dados; `index.ts` tem os mundos e as regras de desbloqueio |
+| `src/curriculum` | lições como dados; `index.ts` tem os mundos e a próxima lição sugerida |
 | `src/progress` | Dexie (`db.ts`), XP/estrelas/dias seguidos (`scoring.ts`, `progress.ts`), ajustes (`settings.ts`, Zustand) |
 | `src/library` | `alphatab.ts` (carregamento UMD, caminhos, Songsterr), `midiImport.ts` (MIDI → GP) |
 | `src/components` | `Fretboard.tsx`, `RhythmStaff.tsx` (glifos Bravura), `TeachBlocks.tsx`, `ui.tsx`, `useHotkeys.tsx`, `AppShell.tsx` |

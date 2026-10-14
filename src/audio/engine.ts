@@ -62,6 +62,16 @@ export function playSequence(midis: number[], gapSec = 0.35) {
   midis.forEach((m, i) => playNote(m, c.currentTime + 0.05 + i * gapSec))
 }
 
+/** Toca um intervalo: melódico (uma nota depois da outra) ou harmônico (as duas juntas). */
+export function playInterval(root: number, semis: number, harmonic = false) {
+  if (harmonic) {
+    const c = audioCtx()
+    const t = c.currentTime + 0.05
+    playNote(root, t, 0.45)
+    playNote(root + semis, t, 0.45)
+  } else playSequence([root, root + semis], 0.6)
+}
+
 export function playClick(when: number, accent = false) {
   const c = audioCtx()
   const osc = c.createOscillator()
