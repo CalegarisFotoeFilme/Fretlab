@@ -1,6 +1,6 @@
 import type * as AT from '@coderline/alphatab'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, Video, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useAudioInput } from '../audio/useInput'
@@ -417,11 +417,6 @@ export function SongPage() {
             </button>
           </div>
         </div>
-        {videoOn && videoSize === 'hidden' && (
-          <button onClick={() => changeVideoSize('small')} className="absolute left-4 top-24 z-20 rounded-lg border border-wood-700 bg-wood-900/95 px-3 py-1.5 text-xs font-semibold text-pearl-dim hover:text-pearl shadow-xl">
-            Mostrar o vídeo <Kbd>V</Kbd>
-          </button>
-        )}
 
         <div className="fixed inset-x-2 bottom-[4.75rem] z-20 md:absolute md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[min(820px,calc(100%-2rem))]">
           {expanded && (
@@ -583,6 +578,15 @@ export function SongPage() {
               <MiniToggle on={looping} onClick={toggleLoop} label="Loop (L)" icon={<Repeat className="size-4" aria-hidden />} />
               <MiniToggle on={metronome} onClick={toggleMetronome} label="Metrônomo (M)" icon={<Timer className="size-4" aria-hidden />} />
               <MiniToggle on={waitMode} onClick={toggleWait} label="Modo espera (W)" icon={<Hourglass className="size-4" aria-hidden />} />
+              {/* vídeo do YouTube: mostrar/ocultar fica na barra, sem cobrir a tab */}
+              {videoOn && (
+                <MiniToggle
+                  on={videoSize !== 'hidden'}
+                  onClick={() => changeVideoSize(videoSize === 'hidden' ? 'small' : 'hidden')}
+                  label={videoSize === 'hidden' ? 'Mostrar o vídeo (V)' : 'Ocultar o vídeo (V)'}
+                  icon={<Video className="size-4" aria-hidden />}
+                />
+              )}
               {waitingFor && (
                 <span className="rounded-lg bg-enclosure/15 px-2 py-1 text-sm font-bold text-enclosure animate-pulse" role="status">
                   Toque {waitingFor.map((pc) => noteName(pc)).join(' / ')}
