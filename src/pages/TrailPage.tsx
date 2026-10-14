@@ -1,4 +1,5 @@
-import { Lock } from 'lucide-react'
+import { ChevronDown, Lock } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '../components/AppShell'
 import { LinkButton, Meter, Stars } from '../components/ui'
@@ -8,9 +9,35 @@ import { useProgress, type ProgressSummary } from '../progress/progress'
 import { DOUBLE_INLAYS, INLAY_FRETS, INSTRUMENT_LABEL } from '../theory/instrument'
 import { useSettings } from '../progress/settings'
 
+const OPEN_KEY = 'fretlab.trail.open'
+
+/** Mundos abertos na trilha (lembrado neste navegador). Começa tudo fechado. */
+function useOpenWorlds() {
+  const [open, setOpen] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]') as string[])
+    } catch {
+      return new Set()
+    }
+  })
+  const toggle = (id: string) => {
+    const next = new Set(open)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setOpen(next)
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify([...next]))
+    } catch {
+      // sem armazenamento local: só não lembra
+    }
+  }
+  return { open, toggle }
+}
+
 export function TrailPage() {
   const progress = useProgress()
   const instrument = useSettings((s) => s.instrument)
+  const { open, toggle } = useOpenWorlds()
   if (!progress) return null
   const starsOf = (id: string) => progress.lessons.get(id)?.stars ?? 0
   const next = nextLesson(starsOf)
@@ -44,9 +71,9 @@ export function TrailPage() {
           </div>
         </aside>
 
-        <div className="lg:order-1 grid gap-12 2xl:grid-cols-2 2xl:gap-x-14 items-start pb-6">
+        <div className="lg:order-1 grid gap-4 2xl:grid-cols-2 2xl:gap-x-8 items-start pb-6">
           {WORLDS.map((w, i) => (
-            <WorldNeck key={w.id} world={w} index={i} starsOf={starsOf} nextId={next?.id} />
+            <WorldNeck key={w.id} world={w} index={i} starsOf={starsOf} nextId={next?.id} open={open.has(w.id)} onToggle={() => toggle(w.id)} />
           ))}
         </div>
       </div>
@@ -78,7 +105,9 @@ function StatusBar({ progress }: { progress: ProgressSummary }) {
   )
 }
 
-function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: number; starsOf: (id: string) => number; nextId?: string }) {
+function WorldNeck({
+  world, index, starsOf, nextId, open, onToggle,
+}: { world: World; index: number; starsOf: (id: string) => number; nextId?: string; open: boolean; onToggle: () => void }) {
   if (world.comingSoon) {
     return (
       <section aria-label={world.title} className="flex items-center gap-4 opacity-60">
@@ -94,19 +123,38 @@ function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: num
     )
   }
   const done = world.lessons.filter((l) => starsOf(l.id) > 0).length
+  const stars = world.lessons.reduce((s, l) => s + starsOf(l.id), 0)
+  const hasNext = world.lessons.some((l) => l.id === nextId)
   return (
-    <section aria-labelledby={`w-${world.id}`}>
-      <div className="flex items-end justify-between gap-4 mb-4">
-        <div>
-          <p className="eyebrow">Mundo {index + 1}</p>
-          <h2 id={`w-${world.id}`} className="text-4xl font-black uppercase">{world.title}</h2>
+    <section aria-labelledby={`w-${world.id}`} className={open ? '2xl:col-span-2' : ''}>
+      {/* cabeçalho clicável: nome, descrição e progresso; as lições abrem embaixo */}
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`l-${world.id}`}
+        className={`w-full panel p-5 text-left flex items-center gap-4 transition-colors hover:border-enclosure/50 ${open ? 'mb-4' : ''}`}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow flex items-center gap-2">
+            Mundo {index + 1}
+            {hasNext && <span className="text-enclosure normal-case tracking-normal">· próxima lição aqui</span>}
+          </p>
+          <h2 id={`w-${world.id}`} className="text-3xl md:text-4xl font-black uppercase">{world.title}</h2>
           <p className="text-pearl-dim">{world.tagline}</p>
-          {world.approach && <p className="mt-1 text-xs text-pearl-faint italic">{world.approach}</p>}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex-1 max-w-80">
+              <Meter value={done} max={world.lessons.length} tone="green" label={`${done} de ${world.lessons.length} lições com estrela`} />
+            </div>
+            <span className="font-mono text-xs text-pearl-faint whitespace-nowrap">
+              {done}/{world.lessons.length} lições · {stars}/{world.lessons.length * 3} ★
+            </span>
+          </div>
         </div>
-        <span className="font-mono text-xs text-pearl-faint whitespace-nowrap">
-          {done}/{world.lessons.length}
-        </span>
-      </div>
+        <ChevronDown className={`size-6 shrink-0 text-pearl-dim transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div id={`l-${world.id}`}>
+          {world.approach && <p className="mb-4 text-xs text-pearl-faint italic">{world.approach}</p>}
 
       {/* O braço na vertical: cada lição é uma casa. */}
       <ol className="relative">
@@ -160,6 +208,8 @@ function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: num
           )
         })}
       </ol>
+        </div>
+      )}
     </section>
   )
 }
