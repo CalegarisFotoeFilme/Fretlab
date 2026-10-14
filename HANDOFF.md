@@ -129,6 +129,8 @@
 2. Leitura em outras posições (casas 5–8, 7–10…) e de trechos curtos.
 3. Modos gregos completos.
 
+- **Sessão 14/10 (fim):** sincronia do YouTube salva na música (`Song.sync`; segunda abertura não consulta o Songsterr); cursor suavizado no modo Gravação (interpolação entre leituras do YouTube); tab isolada (`isolate`) para o destaque do compasso não cobrir os painéis; backup v3 inclui a biblioteca (arquivos em base64, sincronia, volumes; importar não duplica). No app para Mac o backup vai para Downloads (comando `save_backup`). **Aguardando teste do usuário.**
+
 ## App para Mac (Tauri)
 
 - O app é servido em `http://localhost:47321` (`tauri-plugin-localhost`), e a janela principal é criada em `lib.rs`. Motivo: o iframe do YouTube exige referer de página web, e `tauri://` não manda.

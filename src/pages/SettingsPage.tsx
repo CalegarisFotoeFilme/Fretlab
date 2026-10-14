@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { listInputDevices, type InputDevice } from '../audio/engine'
 import { Button, PageHeader, Segmented } from '../components/ui'
 import { db } from '../progress/db'
+import { isDesktop, saveBackupDesktop } from '../library/desktop'
 import { exportProgress, importProgress } from '../progress/progress'
 import { useSettings, type NoteNaming } from '../progress/settings'
 import { INSTRUMENT_LABEL, TUNINGS, type InstrumentKind } from '../theory/instrument'
@@ -40,10 +41,20 @@ export function SettingsPage() {
   }, [])
 
   const doExport = async () => {
-    const blob = new Blob([await exportProgress()], { type: 'application/json' })
+    const json = await exportProgress()
+    const name = `fretlab-backup-${new Date().toISOString().slice(0, 10)}.json`
+    if (isDesktop()) {
+      try {
+        setMsg(`Backup salvo em ${await saveBackupDesktop(name, json)}`)
+      } catch (e) {
+        setMsg(`Não foi possível salvar o backup: ${e}`)
+      }
+      return
+    }
+    const blob = new Blob([json], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `fretlab-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = name
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -51,7 +62,7 @@ export function SettingsPage() {
   const doImport = async (file: File) => {
     try {
       await importProgress(await file.text())
-      setMsg('Progresso importado.')
+      setMsg('Backup importado: progresso e biblioteca.')
     } catch (e) {
       setMsg((e as Error).message)
     }
@@ -151,7 +162,7 @@ export function SettingsPage() {
           {sfMsg && <p role="status" className="mt-2 text-sm text-pearl-dim">{sfMsg}</p>}
         </Field>
 
-        <Field label="Backup do progresso" hint="O progresso fica salvo só neste navegador. Exporte para levar a outro aparelho.">
+        <Field label="Backup (progresso e biblioteca)" hint="Leva o progresso, o treino e todas as músicas (arquivos, sincronia com o YouTube e volumes). Exporte para guardar ou estudar em outro aparelho; importar não duplica músicas que já estão lá.">
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={doExport}>
               <Download className="size-4" aria-hidden /> Exportar

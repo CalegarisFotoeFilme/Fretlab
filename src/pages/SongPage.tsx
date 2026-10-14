@@ -54,7 +54,9 @@ export function SongPage() {
   const noteName = useNoteName()
   // áudio original do YouTube sincronizado com a tab (app para Mac)
   const videoHost = useRef<HTMLDivElement>(null)
-  const original = useOriginalAudio(apiRef, videoHost, song?.songsterrUrl)
+  const original = useOriginalAudio(apiRef, videoHost, song?.songsterrUrl, song?.sync, (sync) => {
+    if (song?.id) void db.songs.update(song.id, { sync })
+  })
   const videoOn = original.state.status === 'on' || original.state.status === 'loading'
   // vídeo: grande, pequeno ou oculto (só o som; lembrado neste navegador)
   const [videoSize, setVideoSize] = useState<'big' | 'small' | 'hidden'>(() => {
@@ -389,7 +391,7 @@ export function SongPage() {
             </Button>
           )}
         </header>
-        <div ref={scroller} className={`flex-1 overflow-auto px-4 md:px-8 min-h-[60vh] ${expanded ? 'pb-[28rem]' : 'pb-48 md:pb-28'}`}>
+        <div ref={scroller} className={`relative z-0 isolate flex-1 overflow-auto px-4 md:px-8 min-h-[60vh] ${expanded ? 'pb-[28rem]' : 'pb-48 md:pb-28'}`}>
           {error && <p className="panel p-4 text-led-red">{error}</p>}
           {!score && !error && <p className="text-pearl-dim py-10 text-center">Carregando a tablatura…</p>}
           {song.origin === 'midi' && score && (

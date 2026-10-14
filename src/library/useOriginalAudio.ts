@@ -58,7 +58,14 @@ function attachExternalMedia(output: AT.synth.IExternalMediaSynthOutput, player:
  * Liga/desliga o áudio original (YouTube) no player: o alphaTab passa para o modo "mídia externa",
  * o vídeo vira o relógio e os pontos do Songsterr alinham cada compasso da tab ao vídeo.
  */
-export function useOriginalAudio(apiRef: RefObject<AT.AlphaTabApi | null>, videoHost: RefObject<HTMLDivElement | null>, songsterrUrl?: string) {
+export function useOriginalAudio(
+  apiRef: RefObject<AT.AlphaTabApi | null>,
+  videoHost: RefObject<HTMLDivElement | null>,
+  songsterrUrl?: string,
+  /** sincronia já salva na música (usada sem buscar no Songsterr) e onde salvar a nova */
+  saved?: SongsterrSync,
+  onFetched?: (sync: SongsterrSync) => void,
+) {
   const [state, setState] = useState<OriginalAudioState>({ status: 'off' })
   const yt = useRef<YTPlayer | null>(null)
   const timer = useRef(0)
@@ -96,7 +103,11 @@ export function useOriginalAudio(apiRef: RefObject<AT.AlphaTabApi | null>, video
     if (!api || !at || !api.score || !songsterrUrl) return
     try {
       setState({ status: 'loading', message: 'Buscando o vídeo e a sincronia no Songsterr…' })
-      const sync = cache.current ?? (await fetchSongsterrSync(songsterrUrl))
+      let sync = cache.current ?? saved ?? null
+      if (!sync) {
+        sync = await fetchSongsterrSync(songsterrUrl)
+        onFetched?.(sync)
+      }
       cache.current = sync
       const video = sync.videos[videoIndex]
       if (!video) throw new Error('Essa música não tem vídeo sincronizado no Songsterr.')
@@ -149,8 +160,21 @@ export function useOriginalAudio(apiRef: RefObject<AT.AlphaTabApi | null>, video
       if (!output) throw new Error('O player da tab não aceitou mídia externa.')
       attachExternalMedia(output, player, YT.PlayerState.PLAYING, guard)
       // o vídeo é o relógio: a tab segue o tempo dele
+      // o YouTube informa o tempo em degraus: entre leituras iguais, avança pelo relógio (cursor sem piscar)
+      let lastYt = -1
+      let lastAt = 0
       timer.current = window.setInterval(() => {
-        if (safe(() => player.getPlayerState(), -1) === YT.PlayerState.PLAYING) output.updatePosition(player.getCurrentTime() * 1000)
+        if (safe(() => player.getPlayerState(), -1) !== YT.PlayerState.PLAYING) {
+          lastYt = -1
+          return
+        }
+        const t = player.getCurrentTime() * 1000
+        const now = performance.now()
+        if (t !== lastYt) {
+          lastYt = t
+          lastAt = now
+          output.updatePosition(t)
+        } else output.updatePosition(t + (now - lastAt) * safe(() => player.getPlaybackRate(), 1))
       }, 40)
       setState({ status: 'on', sync, video, warning })
     } catch (e) {

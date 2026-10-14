@@ -162,6 +162,17 @@ fn read_download(path: String, downloads: State<Downloads>) -> Result<Vec<u8>, S
     std::fs::read(&path).map_err(|e| e.to_string())
 }
 
+/// Salva o backup na pasta Downloads e mostra no Finder (a janela principal não baixa arquivos).
+#[tauri::command]
+fn save_backup(app: AppHandle, name: String, contents: String) -> Result<String, String> {
+    let file = PathBuf::from(&name);
+    let name = file.file_name().ok_or("nome inválido")?;
+    let path = app.path().download_dir().map_err(|e| e.to_string())?.join(name);
+    std::fs::write(&path, contents).map_err(|e| e.to_string())?;
+    let _ = std::process::Command::new("open").arg("-R").arg(&path).spawn();
+    Ok(path.to_string_lossy().into_owned())
+}
+
 /// Porta local em que o app é servido. Em http://localhost (e não tauri://) o player do YouTube
 /// aceita ser embutido: ele exige um "referer" de página web.
 const PORT: u16 = 47321;
@@ -173,7 +184,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .manage(Downloads::default())
         .manage(Pending::default())
-        .invoke_handler(tauri::generate_handler![open_songsterr, read_download])
+        .invoke_handler(tauri::generate_handler![open_songsterr, read_download, save_backup])
         .setup(|app| {
             // log em arquivo também no app final (~/Library/Logs/br.fretlab.desktop/), para depurar downloads
             app.handle().plugin(

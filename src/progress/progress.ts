@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type LessonProgress } from './db'
+import { db, type LessonProgress, type Song } from './db'
 import { dayKey, levelFromXp, starsFor, streak, xpFor } from './scoring'
 
 export interface AttemptResult {
@@ -79,9 +79,32 @@ export function useProgress(): ProgressSummary | undefined {
   })
 }
 
+const toBase64 = async (blob: Blob) => {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
+const fromBase64 = (b64: string) => {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes])
+}
+
+type SongBackup = Omit<Song, 'id' | 'file'> & { file?: string }
+
+/** Backup completo: progresso, treino e a biblioteca de músicas (arquivos, sincronia e volumes). */
 export async function exportProgress() {
-  const [lessons, days, drills] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray()])
-  return JSON.stringify({ app: 'fretlab', version: 2, exportedAt: new Date().toISOString(), lessons, days, drills }, null, 2)
+  const [lessons, days, drills, songs] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray(), db.songs.toArray()])
+  const library: SongBackup[] = await Promise.all(
+    songs.map(async (song) => {
+      const { file, ...rest } = song
+      delete rest.id
+      return { ...rest, file: file ? await toBase64(file) : undefined }
+    }),
+  )
+  return JSON.stringify({ app: 'fretlab', version: 3, exportedAt: new Date().toISOString(), lessons, days, drills, songs: library })
 }
 
 export async function importProgress(json: string) {
@@ -92,4 +115,13 @@ export async function importProgress(json: string) {
     await db.days.bulkPut(data.days)
     if (Array.isArray(data.drills)) await db.drills.bulkPut(data.drills)
   })
+  // biblioteca: não duplica música que já existe aqui (mesmo nome de arquivo e tamanho)
+  if (Array.isArray(data.songs)) {
+    const existing = new Set((await db.songs.toArray()).map((s) => `${s.fileName}|${s.file?.size}`))
+    for (const raw of data.songs as SongBackup[]) {
+      const file = raw.file ? fromBase64(raw.file) : undefined
+      if (existing.has(`${raw.fileName}|${file?.size}`)) continue
+      await db.songs.add({ ...raw, file } as Song)
+    }
+  }
 }

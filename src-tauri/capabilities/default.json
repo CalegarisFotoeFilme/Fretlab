@@ -17,6 +17,7 @@
     },
     "allow-open-songsterr",
     "allow-read-download",
+    "allow-save-backup",
     "log:default"
   ],
   "remote": {

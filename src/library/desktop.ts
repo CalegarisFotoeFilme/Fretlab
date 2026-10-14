@@ -28,6 +28,12 @@ export async function onSongsterrDownload(cb: (d: DesktopDownload) => void) {
   return listen<DesktopDownload>('songsterr-download', (e) => cb(e.payload))
 }
 
+/** Salva o backup em Downloads (o app para Mac não baixa arquivos pelo navegador). Devolve o caminho. */
+export async function saveBackupDesktop(name: string, contents: string) {
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke<string>('save_backup', { name, contents })
+}
+
 /** Lê os bytes de um arquivo baixado pela janela do Songsterr. */
 export async function readDownload(path: string) {
   const { invoke } = await import('@tauri-apps/api/core')
