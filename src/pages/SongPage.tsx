@@ -7,7 +7,7 @@ import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
-import { alphaTabPaths, applySoundFont, customSoundFont, loadAlphaTab, openSongsterr } from '../library/alphatab'
+import { alphaTabPaths, applySoundFont, customSoundFont, loadAlphaTab, openSongsterr, steadyCursor } from '../library/alphatab'
 import { isDesktop } from '../library/desktop'
 import { analyzeSong } from '../library/songAnalysis'
 import { syncAvailable, videoLabel } from '../library/songsterrSync'
@@ -141,6 +141,7 @@ export function SongPage() {
         } as AT.json.SettingsJson)
         const inst = instance
         apiRef.current = inst
+        inst.customCursorHandler = steadyCursor
         inst.scoreLoaded.on((s) => {
           setScore(s)
           const pick = pickTrack(s, kind)
@@ -565,7 +566,7 @@ export function SongPage() {
 
           {/* barra compacta: sempre visível */}
           <div className="flex items-center gap-2 rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-2 shadow-2xl">
-            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-28 shrink-0 whitespace-nowrap" aria-label={playing ? 'Pausar' : 'Tocar'}>
+            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-44 shrink-0 whitespace-nowrap" aria-label={playing ? 'Pausar' : 'Tocar'}>
               {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
               <span className="hidden sm:inline">{ready ? (playing ? 'Pausar' : 'Tocar') : 'Carregando…'}</span> <Kbd>espaço</Kbd>
             </Button>

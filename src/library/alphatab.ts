@@ -121,3 +121,24 @@ export function openSongsterr(url: string) {
     a.click()
   }
 }
+
+type CursorHandler = NonNullable<AT.AlphaTabApi['customCursorHandler']>
+const placeBeat: CursorHandler['placeBeatCursor'] = (cursor, beat) => {
+  const bar = beat.barBounds.masterBarBounds.visualBounds
+  cursor.transitionToX(0, beat.onNotesX)
+  cursor.setBounds(beat.onNotesX, bar.y, 1, bar.h)
+}
+/**
+ * Cursor que salta de nota em nota, sem animação. No WebKit (app para Mac e Safari) a barra
+ * animada do alphaTab some enquanto desliza e parece piscar; parada, ela aparece sempre.
+ */
+export const steadyCursor: CursorHandler = {
+  onAttach() {},
+  onDetach() {},
+  placeBarCursor(cursor, beat) {
+    const bar = beat.barBounds.masterBarBounds.visualBounds
+    cursor.setBounds(bar.x, bar.y, bar.w, bar.h)
+  },
+  placeBeatCursor: placeBeat,
+  transitionBeatCursor: (cursor, beat, startX) => placeBeat(cursor, beat, startX),
+}

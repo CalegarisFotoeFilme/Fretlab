@@ -115,8 +115,6 @@ export function useOriginalAudio(
       api.stop()
       teardown()
       api.settings.player.playerMode = at.PlayerMode.EnabledExternalMedia
-      // o cursor animado reinicia a animação a cada posição recebida do vídeo e pisca: aqui ele salta por nota
-      api.settings.player.enableAnimatedBeatCursor = false
       api.updateSettings()
       await reloadMidi(api)
 
@@ -201,7 +199,6 @@ export function useOriginalAudio(
     teardown()
     if (api && at && api.settings.player.playerMode !== at.PlayerMode.EnabledSynthesizer) {
       api.settings.player.playerMode = at.PlayerMode.EnabledSynthesizer
-      api.settings.player.enableAnimatedBeatCursor = true
       api.updateSettings()
       // o sintetizador foi recriado: sem caminho padrão (SoundFont próprio ou claude.ai), entrega os timbres de novo
       if (!api.settings.player.soundFont) await applySoundFont(api)

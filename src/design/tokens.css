@@ -122,7 +122,9 @@
 .alphatab-host .at-cursor-beat {
   background: var(--color-enclosure);
   width: 3px;
-  box-shadow: 0 0 10px var(--color-enclosure);
+  /* sem box-shadow: o alphaTab estica o cursor com scale(1, altura) e a sombra vira um desfoque
+     gigante que o WebKit deixa de desenhar no meio da animação (a barra "pisca") */
+  will-change: transform;
 }
 .alphatab-host .at-selection div {
   background: rgb(242 118 46 / 0.2);

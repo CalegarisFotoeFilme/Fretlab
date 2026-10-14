@@ -129,7 +129,7 @@
 2. Leitura em outras posições (casas 5–8, 7–10…) e de trechos curtos.
 3. Modos gregos completos.
 
-- **Sessão 14/10 (fim):** sincronia do YouTube salva na música (`Song.sync`; segunda abertura não consulta o Songsterr); cursor suavizado no modo Gravação (interpolação entre leituras do YouTube); tab isolada (`isolate`) para o destaque do compasso não cobrir os painéis; backups separados: estudos (`exportProgress`) e biblioteca (`exportLibrary`, arquivos em base64 + sincronia + volumes); `importBackup` aceita os dois e não duplica músicas; cursor sem animação no modo YouTube (`enableAnimatedBeatCursor=false`, posição nunca recua). No app para Mac o backup vai para Downloads (comando `save_backup`). **Aguardando teste do usuário.**
+- **Sessão 14/10 (fim):** sincronia do YouTube salva na música (`Song.sync`; segunda abertura não consulta o Songsterr); cursor suavizado no modo Gravação (interpolação entre leituras do YouTube); tab isolada (`isolate`) para o destaque do compasso não cobrir os painéis; backups separados: estudos (`exportProgress`) e biblioteca (`exportLibrary`, arquivos em base64 + sincronia + volumes); `importBackup` aceita os dois e não duplica músicas; cursor próprio `steadyCursor` (alphatab.ts): a animação de transição do alphaTab some no WebKit e a barra piscava; obs.: `enableAnimatedBeatCursor=false` não funciona no alphaTab 1.8.4 (bug em `_updateCursorHandler`); posição do YouTube nunca recua. No app para Mac o backup vai para Downloads (comando `save_backup`). **Aguardando teste do usuário.**
 
 ## App para Mac (Tauri)
 
