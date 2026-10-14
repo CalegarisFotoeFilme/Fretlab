@@ -5,7 +5,7 @@ import { listInputDevices, type InputDevice } from '../audio/engine'
 import { Button, PageHeader, Segmented } from '../components/ui'
 import { db } from '../progress/db'
 import { isDesktop, saveBackupDesktop } from '../library/desktop'
-import { exportProgress, importProgress } from '../progress/progress'
+import { exportLibrary, exportProgress, importBackup } from '../progress/progress'
 import { useSettings, type NoteNaming } from '../progress/settings'
 import { INSTRUMENT_LABEL, TUNINGS, type InstrumentKind } from '../theory/instrument'
 
@@ -40,9 +40,10 @@ export function SettingsPage() {
     listInputDevices().then(setDevices, () => {})
   }, [])
 
-  const doExport = async () => {
-    const json = await exportProgress()
-    const name = `fretlab-backup-${new Date().toISOString().slice(0, 10)}.json`
+  const doExport = async (kind: 'progresso' | 'biblioteca') => {
+    setMsg(kind === 'biblioteca' ? 'Preparando o backup da biblioteca…' : '')
+    const json = kind === 'biblioteca' ? await exportLibrary() : await exportProgress()
+    const name = `fretlab-${kind}-${new Date().toISOString().slice(0, 10)}.json`
     if (isDesktop()) {
       try {
         setMsg(`Backup salvo em ${await saveBackupDesktop(name, json)}`)
@@ -57,12 +58,13 @@ export function SettingsPage() {
     a.download = name
     a.click()
     URL.revokeObjectURL(a.href)
+    setMsg('')
   }
 
   const doImport = async (file: File) => {
     try {
-      await importProgress(await file.text())
-      setMsg('Backup importado: progresso e biblioteca.')
+      const done = await importBackup(await file.text())
+      setMsg(done.length ? `Importado: ${done.join(' e ')}.` : 'Esse backup não tinha nada para importar.')
     } catch (e) {
       setMsg((e as Error).message)
     }
@@ -162,20 +164,27 @@ export function SettingsPage() {
           {sfMsg && <p role="status" className="mt-2 text-sm text-pearl-dim">{sfMsg}</p>}
         </Field>
 
-        <Field label="Backup (progresso e biblioteca)" hint="Leva o progresso, o treino e todas as músicas (arquivos, sincronia com o YouTube e volumes). Exporte para guardar ou estudar em outro aparelho; importar não duplica músicas que já estão lá.">
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={doExport}>
-              <Download className="size-4" aria-hidden /> Exportar
-            </Button>
-            <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-wood-800 border border-wood-600/60 font-semibold cursor-pointer hover:bg-wood-700">
-              <Upload className="size-4" aria-hidden /> Importar
-              <input type="file" accept="application/json" className="sr-only" onChange={(e) => e.target.files?.[0] && doImport(e.target.files[0])} />
-            </label>
-          </div>
-        </Field>
+        <BackupField label="Backup dos estudos" hint="Lições, estrelas, sequência de dias e o treino. Exporte para guardar ou continuar em outro aparelho." onExport={() => doExport('progresso')} onImport={doImport} />
+        <BackupField label="Backup da biblioteca" hint="Todas as músicas: os arquivos das tabs, a sincronia com o YouTube e os volumes. Importar não duplica músicas que já estão aqui." onExport={() => doExport('biblioteca')} onImport={doImport} />
         {msg && <p role="status" className="text-pearl-dim">{msg}</p>}
       </div>
     </div>
+  )
+}
+
+function BackupField({ label, hint, onExport, onImport }: { label: string; hint: string; onExport: () => void; onImport: (f: File) => void }) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={onExport}>
+          <Download className="size-4" aria-hidden /> Exportar
+        </Button>
+        <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-wood-800 border border-wood-600/60 font-semibold cursor-pointer hover:bg-wood-700">
+          <Upload className="size-4" aria-hidden /> Importar
+          <input type="file" accept="application/json" className="sr-only" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
+        </label>
+      </div>
+    </Field>
   )
 }
 

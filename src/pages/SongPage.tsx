@@ -565,7 +565,7 @@ export function SongPage() {
 
           {/* barra compacta: sempre visível */}
           <div className="flex items-center gap-2 rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-2 shadow-2xl">
-            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-28" aria-label={playing ? 'Pausar' : 'Tocar'}>
+            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-28 shrink-0 whitespace-nowrap" aria-label={playing ? 'Pausar' : 'Tocar'}>
               {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
               <span className="hidden sm:inline">{ready ? (playing ? 'Pausar' : 'Tocar') : 'Carregando…'}</span> <Kbd>espaço</Kbd>
             </Button>

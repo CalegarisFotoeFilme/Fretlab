@@ -102,8 +102,8 @@ export function useOriginalAudio(
     const at = window.alphaTab
     if (!api || !at || !api.score || !songsterrUrl) return
     try {
-      setState({ status: 'loading', message: 'Buscando o vídeo e a sincronia no Songsterr…' })
       let sync = cache.current ?? saved ?? null
+      setState({ status: 'loading', message: sync ? 'Usando a sincronia salva desta música…' : 'Buscando o vídeo e a sincronia no Songsterr…' })
       if (!sync) {
         sync = await fetchSongsterrSync(songsterrUrl)
         onFetched?.(sync)
@@ -115,6 +115,8 @@ export function useOriginalAudio(
       api.stop()
       teardown()
       api.settings.player.playerMode = at.PlayerMode.EnabledExternalMedia
+      // o cursor animado reinicia a animação a cada posição recebida do vídeo e pisca: aqui ele salta por nota
+      api.settings.player.enableAnimatedBeatCursor = false
       api.updateSettings()
       await reloadMidi(api)
 
@@ -163,9 +165,11 @@ export function useOriginalAudio(
       // o YouTube informa o tempo em degraus: entre leituras iguais, avança pelo relógio (cursor sem piscar)
       let lastYt = -1
       let lastAt = 0
+      let lastPos = -1
       timer.current = window.setInterval(() => {
         if (safe(() => player.getPlayerState(), -1) !== YT.PlayerState.PLAYING) {
           lastYt = -1
+          lastPos = -1
           return
         }
         const t = player.getCurrentTime() * 1000
@@ -173,8 +177,13 @@ export function useOriginalAudio(
         if (t !== lastYt) {
           lastYt = t
           lastAt = now
-          output.updatePosition(t)
-        } else output.updatePosition(t + (now - lastAt) * safe(() => player.getPlaybackRate(), 1))
+        }
+        const pos = t + (now - lastAt) * safe(() => player.getPlaybackRate(), 1)
+        // nunca recua por poucos ms (leitura do YouTube atrasada em relação ao relógio): só em seek de verdade
+        if (pos > lastPos || lastPos - pos > 300) {
+          lastPos = pos
+          output.updatePosition(pos)
+        }
       }, 40)
       setState({ status: 'on', sync, video, warning })
     } catch (e) {
@@ -192,6 +201,7 @@ export function useOriginalAudio(
     teardown()
     if (api && at && api.settings.player.playerMode !== at.PlayerMode.EnabledSynthesizer) {
       api.settings.player.playerMode = at.PlayerMode.EnabledSynthesizer
+      api.settings.player.enableAnimatedBeatCursor = true
       api.updateSettings()
       // o sintetizador foi recriado: sem caminho padrão (SoundFont próprio ou claude.ai), entrega os timbres de novo
       if (!api.settings.player.soundFont) await applySoundFont(api)

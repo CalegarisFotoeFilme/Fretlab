@@ -94,9 +94,15 @@ const fromBase64 = (b64: string) => {
 
 type SongBackup = Omit<Song, 'id' | 'file'> & { file?: string }
 
-/** Backup completo: progresso, treino e a biblioteca de músicas (arquivos, sincronia e volumes). */
+/** Backup dos estudos: lições, dias, treino. */
 export async function exportProgress() {
-  const [lessons, days, drills, songs] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray(), db.songs.toArray()])
+  const [lessons, days, drills] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray()])
+  return JSON.stringify({ app: 'fretlab', kind: 'progress', version: 2, exportedAt: new Date().toISOString(), lessons, days, drills })
+}
+
+/** Backup da biblioteca: músicas com arquivo, sincronia do YouTube e volumes. */
+export async function exportLibrary() {
+  const songs = await db.songs.toArray()
   const library: SongBackup[] = await Promise.all(
     songs.map(async (song) => {
       const { file, ...rest } = song
@@ -104,24 +110,33 @@ export async function exportProgress() {
       return { ...rest, file: file ? await toBase64(file) : undefined }
     }),
   )
-  return JSON.stringify({ app: 'fretlab', version: 3, exportedAt: new Date().toISOString(), lessons, days, drills, songs: library })
+  return JSON.stringify({ app: 'fretlab', kind: 'library', version: 1, exportedAt: new Date().toISOString(), songs: library })
 }
 
-export async function importProgress(json: string) {
+/** Importa qualquer backup do FretLab (estudos, biblioteca ou o antigo com os dois). Diz o que entrou. */
+export async function importBackup(json: string) {
   const data = JSON.parse(json)
   if (data.app !== 'fretlab') throw new Error('Este arquivo não é um backup do FretLab.')
-  await db.transaction('rw', db.lessons, db.days, db.drills, async () => {
-    await db.lessons.bulkPut(data.lessons)
-    await db.days.bulkPut(data.days)
-    if (Array.isArray(data.drills)) await db.drills.bulkPut(data.drills)
-  })
+  const done: string[] = []
+  if (Array.isArray(data.lessons)) {
+    await db.transaction('rw', db.lessons, db.days, db.drills, async () => {
+      await db.lessons.bulkPut(data.lessons)
+      if (Array.isArray(data.days)) await db.days.bulkPut(data.days)
+      if (Array.isArray(data.drills)) await db.drills.bulkPut(data.drills)
+    })
+    done.push('progresso dos estudos')
+  }
   // biblioteca: não duplica música que já existe aqui (mesmo nome de arquivo e tamanho)
   if (Array.isArray(data.songs)) {
     const existing = new Set((await db.songs.toArray()).map((s) => `${s.fileName}|${s.file?.size}`))
+    let added = 0
     for (const raw of data.songs as SongBackup[]) {
       const file = raw.file ? fromBase64(raw.file) : undefined
       if (existing.has(`${raw.fileName}|${file?.size}`)) continue
       await db.songs.add({ ...raw, file } as Song)
+      added++
     }
+    done.push(`${added} ${added === 1 ? 'música nova' : 'músicas novas'} na biblioteca`)
   }
+  return done
 }
