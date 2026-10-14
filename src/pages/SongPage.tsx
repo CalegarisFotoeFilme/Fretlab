@@ -1,15 +1,17 @@
 import type * as AT from '@coderline/alphatab'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Pause, Play, Repeat, Square, Timer, VolumeX } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { Button, Segmented } from '../components/ui'
 import { alphaTabPaths, loadAlphaTab, loadSoundFontBase64, openSongsterr } from '../library/alphatab'
 import { analyzeSong } from '../library/songAnalysis'
 import { db } from '../progress/db'
-import { useInstrument, useSettings } from '../progress/settings'
+import { useInstrument, useNoteName, useSettings } from '../progress/settings'
+import { mod12 } from '../theory/notes'
 
 type View = 'tab' | 'both'
 /** O que soa no player: a banda toda ou só a faixa escolhida (com bateria ou metrônomo de apoio). */
@@ -40,6 +42,13 @@ export function SongPage() {
   const [looping, setLooping] = useState(false)
   const [metronome, setMetronome] = useState(false)
   const [muteMine, setMuteMine] = useState(false)
+  // modo espera (estilo Simply Piano): a cada nota da sua faixa, o player para até você tocá-la
+  const [waitMode, setWaitMode] = useState(false)
+  const [waitingFor, setWaitingFor] = useState<number[] | null>(null)
+  const waitRef = useRef(false)
+  const expectedRef = useRef<Set<number> | null>(null)
+  const lastWaitedRef = useRef<AT.model.Beat | null>(null)
+  const noteName = useNoteName()
   const [mix, setMix] = useState<Mix>('band')
   // controles flutuantes: expandidos ou só a barra compacta (lembra a escolha neste navegador)
   const [expanded, setExpanded] = useState(() => {
@@ -121,6 +130,14 @@ export function SongPage() {
         inst.playedBeatChanged.on((b) => {
           setBar(b.voice.bar.masterBar.index)
           beatsPerBar = b.voice.bar.masterBar.timeSignatureNumerator
+          // modo espera: nota nova da faixa escolhida → pausa e espera a nota certa no instrumento
+          if (!waitRef.current || b.isRest || b === lastWaitedRef.current) return
+          const pcs = [...new Set(b.notes.filter((n) => !n.isTieDestination && !n.isDead).map((n) => mod12(n.realValue)))]
+          if (!pcs.length || b.voice.bar.staff.track.isPercussion) return
+          lastWaitedRef.current = b
+          expectedRef.current = new Set(pcs)
+          inst.pause()
+          setWaitingFor(pcs)
         })
         inst.beatMouseDown.on((b) => setBar(b.voice.bar.masterBar.index))
         // metrônomo visual: os eventos do click chegam junto com o som, mesmo com o volume do metrônomo zerado
@@ -215,6 +232,23 @@ export function SongPage() {
     setMetronome(v)
     applyMix(mix, track, muteMine, v)
   }
+  const toggleWait = () => {
+    const v = !waitMode
+    setWaitMode(v)
+    waitRef.current = v
+    expectedRef.current = null
+    lastWaitedRef.current = null
+    setWaitingFor(null)
+  }
+  // ouvindo o instrumento enquanto o modo espera estiver ligado; qualquer nota esperada (acorde) libera
+  const { status: inputStatus } = useAudioInput(waitMode, {
+    onNote: (midi) => {
+      if (!expectedRef.current?.has(mod12(midi))) return
+      expectedRef.current = null
+      setWaitingFor(null)
+      apiRef.current?.play()
+    },
+  })
   const toggleMute = () => {
     const v = !muteMine
     setMuteMine(v)
@@ -235,6 +269,7 @@ export function SongPage() {
     l: toggleLoop,
     m: toggleMetronome,
     t: toggleMute,
+    w: toggleWait,
     c: toggleExpanded,
     '[': () => goToBar(Math.max(0, bar - 1)),
     ']': () => goToBar(Math.min((score?.masterBars.length ?? 1) - 1, bar + 1)),
@@ -333,11 +368,19 @@ export function SongPage() {
                   ))}
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-3 grid grid-cols-4 gap-2">
                   <Toggle on={looping} onClick={toggleLoop} icon={<Repeat className="size-4" aria-hidden />} label="Loop" kbd="L" />
                   <Toggle on={metronome} onClick={toggleMetronome} icon={<Timer className="size-4" aria-hidden />} label="Metrônomo" kbd="M" />
                   <Toggle on={muteMine} onClick={toggleMute} icon={<VolumeX className="size-4" aria-hidden />} label="Tirar faixa" kbd="T" />
+                  <Toggle on={waitMode} onClick={toggleWait} icon={<Hourglass className="size-4" aria-hidden />} label="Modo espera" kbd="W" />
                 </div>
+                {waitMode && (
+                  <p className="mt-2 text-xs text-pearl-dim">
+                    Modo espera: a cada nota da faixa escolhida o player para até você tocá-la no instrumento (ligue a pedaleira em Ajustes). Junte com "Tirar faixa" para ouvir só a banda.
+                    {inputStatus === 'denied' && <span className="text-led-red"> O navegador bloqueou o microfone.</span>}
+                    {inputStatus === 'error' && <span className="text-led-red"> Não foi possível abrir a entrada de áudio.</span>}
+                  </p>
+                )}
                 <p className="mt-3 text-xs text-pearl-faint">
                   Para praticar um trecho: arraste sobre os compassos na tablatura, ligue o loop e escolha o que tocar. "Tirar faixa" silencia a sua parte para você tocar por cima.
                 </p>
@@ -383,6 +426,12 @@ export function SongPage() {
               <button onClick={() => changeSpeed(speed + 0.05)} className="hidden md:grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Aumentar velocidade">+</button>
               <MiniToggle on={looping} onClick={toggleLoop} label="Loop (L)" icon={<Repeat className="size-4" aria-hidden />} />
               <MiniToggle on={metronome} onClick={toggleMetronome} label="Metrônomo (M)" icon={<Timer className="size-4" aria-hidden />} />
+              <MiniToggle on={waitMode} onClick={toggleWait} label="Modo espera (W)" icon={<Hourglass className="size-4" aria-hidden />} />
+              {waitingFor && (
+                <span className="rounded-lg bg-enclosure/15 px-2 py-1 text-sm font-bold text-enclosure animate-pulse" role="status">
+                  Toque {waitingFor.map((pc) => noteName(pc)).join(' / ')}
+                </span>
+              )}
               <span className="hidden lg:inline max-w-40 truncate rounded-lg bg-wood-950/70 px-2 py-1 text-xs font-semibold text-pearl-dim" title="O que tocar (1–4)">
                 {mixLabel}
               </span>
