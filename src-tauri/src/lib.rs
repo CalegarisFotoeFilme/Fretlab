@@ -15,6 +15,10 @@ use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State, We
 #[derive(Default)]
 struct Downloads(Mutex<HashSet<PathBuf>>);
 
+/// Destino escolhido no início de cada download (por URL): no macOS, o fim do download chega sem o caminho.
+#[derive(Default)]
+struct Pending(Mutex<std::collections::HashMap<String, PathBuf>>);
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DownloadDone {
@@ -53,6 +57,7 @@ fn download_handler(handle: AppHandle) -> impl Fn(tauri::Webview, DownloadEvent)
     move |webview, event| {
         match event {
             DownloadEvent::Requested { url, destination } => {
+                log::info!("download pedido em {}: {} -> {:?}", webview.label(), url, destination);
                 // nome sugerido pelo site (ou o fim da URL)
                 let name = destination
                     .file_name()
@@ -62,8 +67,12 @@ fn download_handler(handle: AppHandle) -> impl Fn(tauri::Webview, DownloadEvent)
                     .unwrap_or_else(|| "songsterr-download".into());
                 let dir = handle.path().download_dir().unwrap_or_else(|_| std::env::temp_dir());
                 *destination = free_path(dir, &name);
+                handle.state::<Pending>().0.lock().unwrap().insert(url.to_string(), destination.clone());
             }
-            DownloadEvent::Finished { path, success, .. } => {
+            DownloadEvent::Finished { url, path, success } => {
+                log::info!("download terminado em {}: {} ok={} path={:?}", webview.label(), url, success, path);
+                // o macOS não informa o caminho no fim: usa o destino guardado no começo
+                let path = path.or_else(|| handle.state::<Pending>().0.lock().unwrap().remove(url.as_str()));
                 if let (true, Some(path)) = (success, path) {
                     handle.state::<Downloads>().0.lock().unwrap().insert(path.clone());
                     let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
@@ -156,11 +165,17 @@ pub fn run() {
         .plugin(tauri_plugin_localhost::Builder::new(PORT).build())
         .plugin(tauri_plugin_http::init())
         .manage(Downloads::default())
+        .manage(Pending::default())
         .invoke_handler(tauri::generate_handler![open_songsterr, read_download])
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())?;
-            }
+            // log em arquivo também no app final (~/Library/Logs/br.fretlab.desktop/), para depurar downloads
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .clear_targets()
+                    .level(log::LevelFilter::Info)
+                    .target(tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir { file_name: Some("fretlab".into()) }))
+                    .build(),
+            )?;
             // em desenvolvimento, o servidor do Vite; no app, o servidor local embutido
             let url = if cfg!(debug_assertions) { "http://localhost:5173".to_string() } else { format!("http://localhost:{PORT}") };
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().expect("url local")))

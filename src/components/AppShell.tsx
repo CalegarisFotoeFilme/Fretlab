@@ -15,15 +15,19 @@ function useSongsterrImports() {
     if (!isDesktop()) return
     let stop: (() => void) | undefined
     let alive = true
+    const log = (msg: string) => void import('@tauri-apps/plugin-log').then((l) => l.info(msg)).catch(() => {})
     void onSongsterrDownload(async (d) => {
-      if (!isSongFile(d.name)) return
+      log(`FretLab recebeu o download: ${d.name} (${d.path}) da página ${d.pageUrl}`)
+      if (!isSongFile(d.name)) return log(`ignorado: não é tablatura (${d.name})`)
       try {
         const bytes = await readDownload(d.path)
         const song = await songFromFile(new File([bytes as BlobPart], d.name))
         const page = d.pageUrl && /songsterr\.com\/a\//.test(d.pageUrl) ? d.pageUrl : undefined
         const id = await db.songs.add({ ...song, songsterrUrl: page })
+        log(`importado como música ${id}`)
         navigate(`/musicas/${id}`)
       } catch (e) {
+        log(`falha ao importar ${d.name}: ${String(e)}`)
         console.error('Não foi possível importar o download do Songsterr', e)
       }
     }).then((un) => {

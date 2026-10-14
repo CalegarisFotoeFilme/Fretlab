@@ -21,6 +21,7 @@
     "@coderline/alphatab": "^1.8.4",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-http": "^2.8.2",
+    "@tauri-apps/plugin-log": "^2.10.1",
     "@tonejs/midi": "^2.0.28",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",

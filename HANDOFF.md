@@ -96,7 +96,11 @@
 - **SoundFont:** dá para carregar um SoundFont próprio em Ajustes (tabela `assets`, `applySoundFont`). Ele também é reaplicado ao voltar do modo YouTube.
 - **Ajustes:** cartão explicando que plugins e pedaleiras USB não impedem a detecção.
 - **Vídeo do YouTube:** pode ficar oculto (tecla `V`).
-- **Download pelo Songsterr (app):** o Songsterr baixa o Guitar Pro por uma janela nova (pop-up). Os pop-ups também usam `download_handler`, avisam o FretLab e fecham sozinhos ao terminar. Antes, o arquivo ia para Downloads sem ser importado.
+- **Download pelo Songsterr (app), validado de ponta a ponta com Toxicity:**
+  - no macOS o `DownloadEvent::Finished` chega com `path=None`;
+  - o destino escolhido em `Requested` fica guardado (`Pending`, por URL) e é usado no fim;
+  - log do app em `~/Library/Logs/br.fretlab.desktop/FretLab.log` (tauri-plugin-log, também no app final; o front usa `@tauri-apps/plugin-log`).
+- **Download pelo Songsterr (app), pop-ups:** o Songsterr baixa o Guitar Pro por uma janela nova (pop-up). Os pop-ups também usam `download_handler`, avisam o FretLab e fecham sozinhos ao terminar. Antes, o arquivo ia para Downloads sem ser importado.
 - **Login com Google no Songsterr (app):** a janela do Songsterr se identifica como Safari (o Google recusa navegador "embutido") e abre os pop-ups (`on_new_window`) como janelas do app, ligadas à que abriu. Verificado: o Google mostrou a conta do usuário. Chave de acesso (passkey) pode não funcionar em app sem a permissão da Apple; nesse caso, entrar com senha e código.
 - **Conserto:** "Abrir o Songsterr" no app (comandos declarados no `build.rs` e liberados na capability). Verificado com um autoteste: a janela abre na metade direita e o site carrega.
 

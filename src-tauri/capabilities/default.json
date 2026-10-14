@@ -16,7 +16,8 @@
       ]
     },
     "allow-open-songsterr",
-    "allow-read-download"
+    "allow-read-download",
+    "log:default"
   ],
   "remote": {
     "urls": [
