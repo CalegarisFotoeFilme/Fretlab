@@ -37,25 +37,28 @@ export function SongPage() {
   const [view, setView] = useState<View>('tab')
   const [time, setTime] = useState({ cur: 0, end: 0 })
 
-  const file = song?.file
+  // O Dexie devolve um Blob novo a cada leitura: usa uma chave estável para não recriar o player.
+  const fileKey = song?.file ? `${song.id}:${song.fileName}:${song.file.size}` : null
   const songRef = useRef(song)
   useEffect(() => {
     songRef.current = song
   })
 
   useEffect(() => {
-    if (!file || !host.current) return
+    const file = songRef.current?.file
+    if (!fileKey || !file || !host.current) return
     let disposed = false
     let instance: AT.AlphaTabApi | null = null
     ;(async () => {
       try {
         const at = await loadAlphaTab()
         if (disposed || !host.current) return
+        const paths = alphaTabPaths()
         instance = new at.AlphaTabApi(host.current, {
-          core: { fontDirectory: alphaTabPaths.fonts, scriptFile: alphaTabPaths.script },
+          core: { fontDirectory: paths.fonts, scriptFile: paths.script },
           player: {
             playerMode: at.PlayerMode.EnabledSynthesizer,
-            soundFont: alphaTabPaths.soundFont,
+            soundFont: paths.soundFont,
             scrollElement: scroller.current ?? undefined,
             enableUserInteraction: true,
           },
@@ -85,6 +88,7 @@ export function SongPage() {
           }
         })
         inst.playerReady.on(() => setReady(true))
+        inst.error.on((e) => setError(`Erro no leitor de tablatura: ${e.message}`))
         inst.playerStateChanged.on((e) => setPlaying(e.state === 1))
         let last = 0
         inst.playerPositionChanged.on((e) => {
@@ -106,7 +110,7 @@ export function SongPage() {
     }
     // recria só quando o arquivo muda
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file])
+  }, [fileKey])
 
   const selectTrack = (t: AT.model.Track) => {
     if (muteMine && track) {
@@ -195,6 +199,12 @@ export function SongPage() {
         <div ref={scroller} className="flex-1 overflow-auto px-4 md:px-8 pb-28 xl:pb-8 min-h-[60vh]">
           {error && <p className="panel p-4 text-led-red">{error}</p>}
           {!score && !error && <p className="text-pearl-dim py-10 text-center">Carregando a tablatura…</p>}
+          {song.origin === 'midi' && score && (
+            <p className="mb-3 text-sm text-pearl-faint">
+              Tablatura convertida do MIDI: cordas e casas vêm do Songsterr, quiálteras foram aproximadas
+              {song.skippedTracks?.length ? `, e ficaram de fora: ${song.skippedTracks.join(', ')}` : ''}.
+            </p>
+          )}
           <div ref={host} className="alphatab-host" />
         </div>
       </section>

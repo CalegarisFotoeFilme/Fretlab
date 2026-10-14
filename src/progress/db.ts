@@ -21,6 +21,9 @@ export interface Song {
   songsterrUrl?: string
   file?: Blob
   fileName?: string
+  /** De onde veio a tab: Guitar Pro, MusicXML ou MIDI convertido pelo FretLab. */
+  origin?: 'gp' | 'musicxml' | 'midi'
+  skippedTracks?: string[]
   notes?: string
   addedAt: number
   lastOpenedAt?: number

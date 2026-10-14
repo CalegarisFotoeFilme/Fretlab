@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",
+    "@tonejs/midi": "^2.0.28",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^1.56.0",

@@ -6,28 +6,34 @@ import { Button, PageHeader } from '../components/ui'
 import { openSongsterr, parseSongsterrUrl } from '../library/alphatab'
 import { db, type Song } from '../progress/db'
 
-const GP_ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.musicxml,.xml'
+const GP_ACCEPT = '.gp,.gp3,.gp4,.gp5,.gpx,.gp7,.musicxml,.xml,.mid,.midi'
+const isMidi = (f: File) => /\.midi?$/i.test(f.name)
 
 export function LibraryPage() {
   const songs = useLiveQuery(() => db.songs.orderBy('addedAt').reverse().toArray())
   const [adding, setAdding] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const importFile = async (file: File) => {
-    const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
-    const id = await db.songs.add({ title, artist: '', file, fileName: file.name, addedAt: Date.now() })
-    navigate(`/musicas/${id}`)
+    try {
+      setStatus(null)
+      const id = await db.songs.add(await songFromFile(file, setStatus))
+      navigate(`/musicas/${id}`)
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
   }
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 md:px-10 pt-8">
       <PageHeader eyebrow="Repertório" title="Músicas">
-        Importe as tabs que você baixa no Songsterr (Guitar Pro) e toque aqui com velocidade, loop e a teoria da música ao lado.
+        Importe as tabs que você baixa no Songsterr (Guitar Pro ou MIDI) e toque aqui com velocidade, loop e a teoria da música ao lado.
       </PageHeader>
 
       <div className="flex flex-wrap gap-3 mb-8">
         <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-enclosure text-wood-950 font-semibold cursor-pointer shadow-[0_3px_0_var(--color-enclosure-deep)] hover:brightness-105 focus-within:outline-2 focus-within:outline-enclosure">
-          <Upload className="size-4" aria-hidden /> Importar arquivo Guitar Pro
+          <Upload className="size-4" aria-hidden /> Importar Guitar Pro ou MIDI
           <input type="file" accept={GP_ACCEPT} className="sr-only" onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
         </label>
         <Button variant="secondary" onClick={() => setAdding(true)}>
@@ -35,6 +41,11 @@ export function LibraryPage() {
         </Button>
       </div>
 
+      {status && (
+        <p role="status" className="panel p-3 mb-6 text-pearl-dim">
+          {status}
+        </p>
+      )}
       {adding && <AddLink onDone={() => setAdding(false)} />}
 
       {songs && songs.length === 0 && !adding && <EmptyState />}
@@ -44,6 +55,28 @@ export function LibraryPage() {
       </ul>
     </div>
   )
+}
+
+/** Lê o arquivo escolhido. MIDI é convertido para Guitar Pro (com cordas e casas) antes de salvar. */
+async function songFromFile(file: File, onStatus?: (s: string) => void): Promise<Song> {
+  if (isMidi(file)) {
+    onStatus?.('Convertendo o MIDI em tablatura…')
+    const [{ loadAlphaTab }, { midiToGuitarPro }] = await Promise.all([import('../library/alphatab'), import('../library/midiImport')])
+    const at = await loadAlphaTab()
+    const r = midiToGuitarPro(at, new Uint8Array(await file.arrayBuffer()), file.name)
+    return {
+      title: r.title,
+      artist: r.artist,
+      file: new Blob([r.bytes as BlobPart], { type: 'application/octet-stream' }),
+      fileName: `${r.title}.gp`,
+      origin: 'midi',
+      skippedTracks: r.skipped,
+      addedAt: Date.now(),
+    }
+  }
+  const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')
+  const origin = /\.(musicxml|xml)$/i.test(file.name) ? 'musicxml' : 'gp'
+  return { title, artist: '', file, fileName: file.name, origin, addedAt: Date.now() }
 }
 
 function SongCard({ song }: { song: Song }) {
@@ -58,7 +91,7 @@ function SongCard({ song }: { song: Song }) {
           <h2 className="font-sans text-lg font-bold truncate">{song.title}</h2>
           <p className="text-sm text-pearl-dim truncate">{song.artist || 'Artista desconhecido'}</p>
           <div className="mt-1 flex gap-3">
-            {song.file && <span className="eyebrow">Guitar Pro</span>}
+            {song.file && <span className="eyebrow">{song.origin === 'midi' ? 'MIDI → tab' : song.origin === 'musicxml' ? 'MusicXML' : 'Guitar Pro'}</span>}
             {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
           </div>
         </div>
@@ -86,7 +119,7 @@ function SongCard({ song }: { song: Song }) {
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) void db.songs.update(song.id!, { file: f, fileName: f.name })
+                if (f) void songFromFile(f).then(({ file, fileName, origin, skippedTracks }) => db.songs.update(song.id!, { file, fileName, origin, skippedTracks }))
               }}
             />
           </label>
@@ -160,9 +193,9 @@ function EmptyState() {
       </div>
       <ol className="grid gap-4 text-pearl/90">
         <li>
-          <p className="font-semibold">Baixar o Guitar Pro</p>
+          <p className="font-semibold">Baixar o arquivo da música</p>
           <p className="text-sm text-pearl-dim">
-            No Songsterr, abra a música e baixe como Guitar Pro (recurso do Plus). Importe o arquivo aqui para tocar com loop, velocidade e a análise teórica.
+            No Songsterr, baixe a música como Guitar Pro ou MIDI (recursos do Plus). O FretLab lê os dois: o MIDI do Songsterr guarda a corda de cada nota, então a tablatura sai igual. Depois é só tocar com loop, velocidade e a análise teórica.
           </p>
         </li>
         <li>

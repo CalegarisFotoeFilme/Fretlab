@@ -31,8 +31,15 @@ async function seed(page, stars) {
   }), stars)
 }
 
-for (const [name, viewport] of (process.env.VIEWPORTS ?? 'desktop').split(',').map((v) => [v, v === 'mobile' ? { width: 390, height: 844 } : { width: 1440, height: 900 }])) {
-  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2 })
+const VIEWPORTS = {
+  mobile: { viewport: { width: 390, height: 844 }, dpr: 2 },
+  desktop: { viewport: { width: 1440, height: 900 }, dpr: 2 },
+  ultrawide: { viewport: { width: 2560, height: 1080 }, dpr: 1 },
+}
+
+for (const name of (process.env.VIEWPORTS ?? 'ultrawide,desktop').split(',')) {
+  const { viewport, dpr } = VIEWPORTS[name]
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr })
   const page = await ctx.newPage()
   const shot = async (file, full = false) => {
     await page.waitForTimeout(600)
@@ -70,6 +77,14 @@ for (const [name, viewport] of (process.env.VIEWPORTS ?? 'desktop').split(',').m
   await shot('10-afinador', true)
   await page.goto(`${BASE}/ajustes`)
   await shot('11-ajustes', true)
+
+  await page.goto(`${BASE}/musicas`)
+  await shot('12-musicas-vazio')
+  await page.locator('input[type=file]').first().setInputFiles('tests/fixtures/exemplo-baixo-mi-menor.musicxml')
+  await page.waitForURL(/\/musicas\/\d+/)
+  await page.waitForSelector('.alphatab-host svg', { timeout: 20000 }).catch(() => {})
+  await page.waitForTimeout(2500)
+  await shot('13-player')
   await ctx.close()
 }
 await browser.close()

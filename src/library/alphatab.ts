@@ -28,10 +28,10 @@ export function loadAlphaTab(): Promise<typeof AT> {
   return loading
 }
 
-export const alphaTabPaths = {
-  script: `${BASE}alphaTab.min.js`,
-  fonts: `${BASE}font/`,
-  soundFont: `${BASE}soundfont/sonivox.sf2`,
+/** URLs absolutas: o worker do alphaTab roda a partir de um blob e não resolve caminhos relativos. */
+export function alphaTabPaths() {
+  const abs = (p: string) => new URL(BASE + p, window.location.origin).href
+  return { script: abs('alphaTab.min.js'), fonts: abs('font/'), soundFont: abs('soundfont/sonivox.sf2') }
 }
 
 export interface ScoreNote {
