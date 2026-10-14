@@ -6,6 +6,7 @@ export const world1: World = {
   id: 'braco',
   title: 'O Braço',
   tagline: 'Saber onde cada nota mora',
+  approach: 'Abordagem inspirada em Desi Serna (Guitar Theory for Dummies): as cordas graves primeiro, como mapa para o resto do braço.',
   lessons: [
     {
       id: 'w1-cordas-soltas',

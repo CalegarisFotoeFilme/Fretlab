@@ -4,6 +4,7 @@ export const world2: World = {
   id: 'ritmo',
   title: 'Ritmo I',
   tagline: 'Tocar no tempo, ler as figuras',
+  approach: 'Abordagem inspirada em William Leavitt (Modern Method for Guitar): uma figura nova por vez, sempre com metrônomo.',
   lessons: [
     {
       id: 'w2-pulso',

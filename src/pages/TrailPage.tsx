@@ -101,6 +101,7 @@ function WorldNeck({ world, index, starsOf, nextId }: { world: World; index: num
           <p className="eyebrow">Mundo {index + 1}</p>
           <h2 id={`w-${world.id}`} className="text-4xl font-black uppercase">{world.title}</h2>
           <p className="text-pearl-dim">{world.tagline}</p>
+          {world.approach && <p className="mt-1 text-xs text-pearl-faint italic">{world.approach}</p>}
         </div>
         <span className="font-mono text-xs text-pearl-faint whitespace-nowrap">
           {done}/{world.lessons.length}

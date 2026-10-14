@@ -67,6 +67,8 @@ export interface World {
   id: string
   title: string
   tagline: string
+  /** De onde vem a abordagem pedagógica (crédito; o texto do app é original). */
+  approach?: string
   lessons: Lesson[]
   comingSoon?: boolean
 }
