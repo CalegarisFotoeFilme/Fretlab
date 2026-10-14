@@ -104,19 +104,26 @@
 - **Login com Google no Songsterr (app):** a janela do Songsterr se identifica como Safari (o Google recusa navegador "embutido") e abre os pop-ups (`on_new_window`) como janelas do app, ligadas à que abriu. Verificado: o Google mostrou a conta do usuário. Chave de acesso (passkey) pode não funcionar em app sem a permissão da Apple; nesse caso, entrar com senha e código.
 - **Conserto:** "Abrir o Songsterr" no app (comandos declarados no `build.rs` e liberados na capability). Verificado com um autoteste: a janela abre na metade direita e o site carrega.
 
-### B. Validar com o usuário (precisa do Mac e da pedaleira)
+### B. Validado com o usuário (2026-10-14)
 
-- **Áudio original no app para Mac:** abrir uma música com link do Songsterr → painel do player → Áudio → "Gravação (YouTube)". No navegador, o fluxo foi validado com dados injetados (Dua Lipa, s474943: 92 compassos = 92 pontos, compassos 9–12 batendo com 16–22 s). Ainda não foi visto no app: confirmar que o YouTube toca servido em `http://localhost:47321`.
-- **Songsterr ao lado + download direto:** em Músicas → "Abrir o Songsterr ao lado" → baixar um GP → ele deve abrir sozinho na biblioteca (`useSongsterrImports`).
-- **Áudio real:**
-  - modo espera do player;
-  - "desenhe no braço" tocando;
-  - ritmo pelo instrumento;
-  - leitura tocando.
-  Ajustar sensibilidade e latência se preciso.
-- O app para Mac tem banco próprio. O progresso passa pelo backup em Ajustes; as músicas precisam ser reimportadas.
+- O app para Mac abre o Songsterr ao lado, faz login com Google (o pop-up abre; se a chave de acesso falhar, entrar com senha) e importa downloads automaticamente. Testado com Toxicity.
+- Os downloads vão para `~/Library/Application Support/br.fretlab.desktop/musicas` (backup) e para o banco do app.
+- O GeneralUser GS (`~/Downloads/GeneralUser-GS/`) está carregado no app (Ajustes → SoundFont).
+- O mostrar/ocultar do vídeo fica na barra flutuante do player (ícone de vídeo, tecla V).
+- **Ainda não confirmado pelo usuário:** tocar com a "Gravação (YouTube)" no app. No navegador, o fluxo foi validado com dados injetados.
 
-### C. Ideias para depois
+### C. Próximo planejamento (pedido do usuário)
+
+1. **Mundo de técnica de baixo:** pizzicato com dois dedos (alternância e "rest stroke"), slap (thumb e pop), tapping, abafamento (mão esquerda e direita), ghost notes, hammer-on/pull-off e slides, palhetada no baixo, walking bass. Por lição:
+   - explicação da mecânica;
+   - exercício rítmico com metrônomo, usando o `rhythm` com `input: 'play'` e padrões próprios;
+   - "desenhe no braço" quando fizer sentido;
+   - vínculo com o Treino do Dia (exercícios técnicos novos em `src/training/drills.ts`, com `why`/`how`/`tips`).
+   Na notação, considerar símbolos de técnica (T/P do slap, x de ghost notes) na `RhythmStaff` ou em tabs curtas desenhadas (`TabView`).
+2. **Mundo de técnica de guitarra:** palhetada alternada e econômica, palm mute, bends (com afinação-alvo ouvida pelo detector), vibrato, legato (hammer-on/pull-off), slides, sweep picking, tapping, abafamento e "string skipping", acordes com pestana (ligar ao CAGED).
+3. Os mundos devem aparecer conforme o instrumento configurado (filtrar em `WORLDS` por `instrument`), mantendo a trilha toda aberta.
+
+### D. Ideias para depois
 
 1. Treino do Dia: repetição espaçada por fato errado (corda/casa, intervalo, grau), além da revisão por lição.
 2. Leitura em outras posições (casas 5–8, 7–10…) e de trechos curtos.
