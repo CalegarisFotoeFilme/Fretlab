@@ -1,12 +1,13 @@
 import { Lightbulb, Volume2 } from 'lucide-react'
-import { playInterval, playNote } from '../audio/engine'
+import { playChord, playInterval, playNote, playSequence } from '../audio/engine'
 import type { TeachBlock } from '../curriculum/types'
-import { HAND_SPAN, intervalTargets, parsePattern, resolvePool, resolveStrings } from '../exercises/generate'
+import { HAND_SPAN, chordMidis, intervalTargets, parsePattern, resolvePool, resolveStrings, setName, setPcs, setPositions } from '../exercises/generate'
 import { previewPattern } from '../exercises/Rhythm'
 import { FIGURE_BEATS, FIGURE_LABEL, type Figure } from '../exercises/rhythmScore'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { findPositions, midiAt, stringNumber } from '../theory/instrument'
-import { INTERVALS, mod12 } from '../theory/notes'
+import { CHORDS, INTERVALS, SCALES, chordName, harmonicField, intervalBetween, mod12, prefersFlats } from '../theory/notes'
+import { functionOf } from '../theory/analysis'
 import { Fretboard } from './Fretboard'
 import { RhythmStaff } from './RhythmStaff'
 import { Button } from './ui'
@@ -166,6 +167,90 @@ function Block({ block }: { block: TeachBlock }) {
               </Button>
             </span>
           </figcaption>
+        </figure>
+      )
+    }
+    case 'formula': {
+      const flats = prefersFlats(block.root)
+      const steps: readonly number[] = 'scale' in block.set ? SCALES[block.set.scale].steps : CHORDS[block.set.chord].formula
+      const pcs = setPcs(block.root, block.set)
+      const title = 'scale' in block.set ? `${noteName(block.root, flats)} ${setName(block.set).toLowerCase()}` : chordName(block.root, block.set.chord, flats)
+      // passos entre notas vizinhas (escalas): T = tom, S = semitom, T½ = um tom e meio
+      const gaps = 'scale' in block.set ? [...steps.slice(1), 12].map((s, i) => s - steps[i]) : []
+      const base = 48 + block.root
+      const midis = [...steps.map((s) => base + s), ...('scale' in block.set ? [base + 12] : [])]
+      return (
+        <figure className="panel p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-2xl font-black uppercase">{title}</p>
+            <Button variant="secondary" onClick={() => ('scale' in block.set ? playSequence(midis, 0.3) : (playChord(midis), setTimeout(() => playChord(midis, true), 900)))}>
+              <Volume2 className="size-4" aria-hidden /> Ouvir
+            </Button>
+          </div>
+          <ol className="mt-3 flex flex-wrap items-center gap-1.5">
+            {pcs.map((pc, i) => (
+              <li key={i} className="flex items-center gap-1.5">
+                <span className={`grid min-w-14 rounded-lg border px-2 py-1 text-center ${i === 0 ? 'border-enclosure/70 bg-enclosure/10' : 'border-wood-700'}`}>
+                  <span className="font-display text-2xl font-black">{noteName(pc, flats)}</span>
+                  <span className="font-mono text-[11px] text-pearl-faint">{intervalBetween(block.root, pc).short}</span>
+                </span>
+                {gaps[i] !== undefined && <span className="font-mono text-xs text-pearl-dim">{gaps[i] === 1 ? 'S' : gaps[i] === 2 ? 'T' : gaps[i] === 3 ? 'T½' : `${gaps[i]}`}</span>}
+              </li>
+            ))}
+          </ol>
+          {block.caption && <figcaption className="mt-2 text-sm text-pearl-dim">{block.caption}</figcaption>}
+        </figure>
+      )
+    }
+    case 'map': {
+      const pcs = setPcs(block.root, block.set)
+      const from = block.from ?? 0
+      const to = Math.min(inst.frets, block.to ?? 12)
+      // com posição: só as notas dela cheias, o resto tracejado
+      let win: [number, number] | null = null
+      if (block.anchor && block.anchor.string < inst.openMidi.length) {
+        const rf = findPositions(inst, block.root, to, from).find((p) => p.string === block.anchor!.string && p.fret + block.anchor!.offset >= 0)
+        if (rf) win = [rf.fret + block.anchor.offset, rf.fret + block.anchor.offset + block.anchor.width]
+      }
+      const markers = setPositions(inst, pcs, from, to).map((p) => {
+        const pc = mod12(midiAt(inst, p))
+        const inWin = !win || (p.fret >= win[0] && p.fret <= win[1])
+        return { ...p, label: intervalBetween(block.root, pc).short, tone: !inWin ? ('ghost' as const) : pc === block.root ? ('root' as const) : ('neutral' as const) }
+      })
+      return (
+        <figure className="panel p-3">
+          <div className="-mx-3 overflow-x-auto px-3">
+            <Fretboard inst={inst} from={from} to={to} markers={markers} leftHanded={leftHanded} onPick={(p) => playNote(midiAt(inst, p))} />
+          </div>
+          <figcaption className="mt-2 px-1 text-sm text-pearl-dim">{block.caption}</figcaption>
+        </figure>
+      )
+    }
+    case 'field': {
+      const flats = prefersFlats(block.root, block.mode)
+      const field = harmonicField(block.root, block.mode, block.sevenths)
+      const key = { root: block.root, mode: block.mode }
+      return (
+        <figure className="panel p-4">
+          <p className="font-display text-2xl font-black uppercase">
+            Campo de {noteName(block.root, flats)} {block.mode === 'major' ? 'maior' : 'menor'}
+          </p>
+          <div className="mt-3 grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+            {field.map((d) => (
+              <button
+                key={d.degree}
+                onClick={() => playChord(chordMidis(48 + d.root - (d.root > 7 ? 12 : 0), d.quality))}
+                className="rounded-lg border border-wood-700 px-2 py-1.5 text-left hover:border-enclosure/60 hover:bg-wood-800"
+                title="Ouvir"
+              >
+                <span className="flex justify-between font-mono text-[10px] text-pearl-faint">
+                  {d.roman} <span>{{ tônica: 'T', subdominante: 'S', dominante: 'D' }[functionOf(d.root, key)!]}</span>
+                </span>
+                <span className="font-display text-xl font-black">{chordName(d.root, d.quality, flats)}</span>
+              </button>
+            ))}
+          </div>
+          {block.caption && <figcaption className="mt-2 text-sm text-pearl-dim">{block.caption}</figcaption>}
         </figure>
       )
     }

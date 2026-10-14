@@ -1,4 +1,4 @@
-import type { PitchClass } from '../theory/notes'
+import type { ChordQuality, PitchClass, ScaleId } from '../theory/notes'
 
 /** Índices de corda a partir da mais grave (0). 'all' = todas. */
 export type StringSel = 'all' | number[]
@@ -74,7 +74,71 @@ export interface HearIntervalSpec {
   mode: 'melodic' | 'harmonic' | 'both'
 }
 
-export type ExerciseSpec = FindNoteSpec | NameNoteSpec | RhythmSpec | QuizSpec | PlayIntervalSpec | NameIntervalSpec | HearIntervalSpec
+/** Conjunto de notas a partir de uma fundamental: uma escala ou um acorde (arpejo). */
+export type NoteSetSource = { scale: ScaleId } | { chord: ChordQuality }
+
+/**
+ * Onde fica a "caixa" (posição) em relação à fundamental: a fundamental cai na corda `string`
+ * (0 = mais grave), e a posição vai da casa (fundamental + offset) até (+ width).
+ */
+export interface ShapeAnchor {
+  string: number
+  offset: number
+  width: number
+  /** nome da forma, ex.: "forma de E" */
+  name?: string
+}
+
+/** Encontrar todas as notas de uma escala/acorde dentro de uma posição do braço. */
+export interface NoteSetSpec {
+  type: 'note-set'
+  input: 'tap' | 'play'
+  shapes: { set: NoteSetSource; anchor: ShapeAnchor }[]
+  roots: NotePool
+  /** casas onde a fundamental pode cair na corda âncora */
+  frets: FretRange
+}
+
+/** Ouvir um acorde e dizer o tipo (maior, menor, 7…). */
+export interface HearChordSpec {
+  type: 'hear-chord'
+  qualities: ChordQuality[]
+  /** arpejado (nota a nota) em vez de plaqueado */
+  arpeggio?: boolean
+}
+
+/** Ouvir a tônica e depois outro acorde do campo: qual é o grau? */
+export interface HearDegreeSpec {
+  type: 'hear-degree'
+  mode: 'major' | 'minor'
+  /** graus possíveis (1..7) */
+  degrees: number[]
+}
+
+export type TheoryAsk = 'chord-of-degree' | 'degree-of-chord' | 'function' | 'relative' | 'spell-chord' | 'scale-notes' | 'progression'
+
+/** Perguntas de teoria geradas a cada rodada (tons e acordes sorteados). */
+export interface TheoryQuizSpec {
+  type: 'theory-quiz'
+  asks: TheoryAsk[]
+  keys: PitchClass[]
+  mode: 'major' | 'minor' | 'both'
+  /** tipos de acorde para 'spell-chord' */
+  qualities?: ChordQuality[]
+}
+
+export type ExerciseSpec =
+  | FindNoteSpec
+  | NameNoteSpec
+  | RhythmSpec
+  | QuizSpec
+  | PlayIntervalSpec
+  | NameIntervalSpec
+  | HearIntervalSpec
+  | NoteSetSpec
+  | HearChordSpec
+  | HearDegreeSpec
+  | TheoryQuizSpec
 
 export type TeachBlock =
   | { kind: 'text'; text: string }
@@ -85,6 +149,12 @@ export type TeachBlock =
   | { kind: 'figures' }
   /** forma de um intervalo no braço, a partir de uma fundamental na corda indicada (0 = mais grave) */
   | { kind: 'interval'; semitones: number; string?: number; caption: string }
+  /** fórmula de uma escala/acorde: notas, graus, passos (T/S) e som */
+  | { kind: 'formula'; set: NoteSetSource; root: PitchClass; caption?: string }
+  /** mapa das notas de uma escala/acorde no braço, com a fundamental destacada (e a posição, se houver) */
+  | { kind: 'map'; set: NoteSetSource; root: PitchClass; from?: number; to?: number; anchor?: ShapeAnchor; caption: string }
+  /** campo harmônico de um tom, com funções e som */
+  | { kind: 'field'; root: PitchClass; mode: 'major' | 'minor'; sevenths?: boolean; caption?: string }
 
 export interface Lesson {
   id: string

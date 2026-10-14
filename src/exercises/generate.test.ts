@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { ALL_LESSONS, nextLesson } from '../curriculum'
 import { makeInstrument, pcAt } from '../theory/instrument'
-import { findNoteRound, hearIntervalRound, intervalOptions, intervalRound, intervalTargets, nameNoteRound, parsePattern, HAND_SPAN } from './generate'
+import { degreeChordMidis, noteSetRound, setPcs, theoryQuestion, findNoteRound, hearIntervalRound, intervalOptions, intervalRound, intervalTargets, nameNoteRound, parsePattern, HAND_SPAN } from './generate'
 import { midiAt } from '../theory/instrument'
+import { pcName } from '../theory/notes'
 import { totalBeats } from './rhythmScore'
 
 const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
@@ -66,6 +67,54 @@ describe('intervalos', () => {
   })
 })
 
+describe('escalas, arpejos e teoria', () => {
+  it('desenhe no braço: todas as notas da posição e só elas', () => {
+    const spec = {
+      shapes: [{ set: { scale: 'minorPentatonic' as const }, anchor: { string: 0, offset: 0, width: 3 } }],
+      roots: 'all' as const,
+      frets: { from: 1, to: 9 },
+    }
+    for (const inst of instruments)
+      for (let i = 0; i < 200; i++) {
+        const r = noteSetRound(inst, spec)
+        const pcs = setPcs(r.root, r.set)
+        expect(pcAt(inst, r.rootPos)).toBe(r.root)
+        expect(r.targets.length).toBeGreaterThanOrEqual(3)
+        for (const t of r.targets) {
+          expect(pcs).toContain(pcAt(inst, t))
+          expect(t.fret).toBeGreaterThanOrEqual(r.from)
+          expect(t.fret).toBeLessThanOrEqual(r.to)
+        }
+      }
+    // pentatônica de Lá na caixa 1 do baixo (casas 5–8): 8 notas em 4 cordas
+    const r = noteSetRound(instruments[0], { ...spec, roots: [9], frets: { from: 5, to: 5 } })
+    expect(r.targets).toHaveLength(8)
+  })
+
+  it('quiz de teoria: a resposta marcada é a certa', () => {
+    const name = (pc: number, flats?: boolean) => pcName(pc, flats)
+    for (let i = 0; i < 300; i++) {
+      const q = theoryQuestion({ asks: ['chord-of-degree', 'degree-of-chord', 'function', 'relative', 'spell-chord', 'scale-notes', 'progression'], keys: [0, 2, 5, 7, 9, 10], mode: 'both', qualities: ['maj', 'min', 'dom7', 'min7'] }, name)
+      expect(q.answer).toBeGreaterThanOrEqual(0)
+      expect(new Set(q.options).size).toBe(q.options.length)
+    }
+    // casos fixos
+    const fixed = theoryQuestion({ asks: ['relative'], keys: [0], mode: 'major' }, name)
+    expect(fixed.options[fixed.answer]).toBe('A menor')
+    const v = theoryQuestion({ asks: ['spell-chord'], keys: [7], mode: 'major', qualities: ['dom7'] }, name)
+    expect(v.options[v.answer]).toBe('G – B – D – F')
+  })
+
+  it('acordes dos graus ficam numa região média', () => {
+    for (let k = 0; k < 12; k++)
+      for (let d = 1; d <= 7; d++) {
+        const m = degreeChordMidis(k, 'major', d)
+        expect(Math.min(...m)).toBeGreaterThanOrEqual(36)
+        expect(Math.max(...m)).toBeLessThanOrEqual(72)
+      }
+  })
+})
+
 describe('currículo', () => {
   it('todos os exercícios são válidos', () => {
     for (const l of ALL_LESSONS) {
@@ -76,6 +125,14 @@ describe('currículo', () => {
       if (ex.type === 'quiz') {
         ex.questions.forEach((q) => expect(q.answer).toBeLessThan(q.options.length))
         expect(l.rounds).toBeLessThanOrEqual(ex.questions.length)
+      }
+      if (ex.type === 'note-set') {
+        for (const inst of instruments)
+          for (const shape of ex.shapes)
+            expect(() => noteSetRound(inst, { ...ex, shapes: [shape] }), `${l.id} (${inst.kind}) ${JSON.stringify(shape)}`).not.toThrow()
+      }
+      if (ex.type === 'theory-quiz') {
+        for (let i = 0; i < 30; i++) expect(theoryQuestion(ex, (pc, f) => pcName(pc, f)).answer).toBeGreaterThanOrEqual(0)
       }
       if (ex.type === 'play-interval' || ex.type === 'name-interval') {
         for (const inst of instruments) expect(() => intervalRound(inst, ex.intervals, ex.strings, ex.frets), `${l.id} (${inst.kind})`).not.toThrow()

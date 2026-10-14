@@ -8,13 +8,7 @@ import { Button, LinkButton, Meter, Stars } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { findLesson, nextLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
-import { FindNote } from '../exercises/FindNote'
-import { NameNote } from '../exercises/NameNote'
-import { Quiz } from '../exercises/Quiz'
-import { Rhythm } from '../exercises/Rhythm'
-import { PlayInterval } from '../exercises/PlayInterval'
-import { NameInterval } from '../exercises/NameInterval'
-import { HearInterval } from '../exercises/HearInterval'
+import { ExerciseView } from '../exercises/ExerciseView'
 import { recordAttempt, useProgress, type AttemptResult } from '../progress/progress'
 
 type Phase = 'teach' | 'play' | 'result'
@@ -117,13 +111,7 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
 
       {phase === 'play' && (
         <div key={attempt} className="xl:min-h-[calc(100dvh-8rem)] xl:flex xl:flex-col xl:justify-center">
-          {ex.type === 'find-note' && <FindNote spec={ex} {...props} />}
-          {ex.type === 'name-note' && <NameNote spec={ex} {...props} />}
-          {ex.type === 'quiz' && <Quiz spec={ex} {...props} />}
-          {ex.type === 'rhythm' && <Rhythm spec={ex} {...props} />}
-          {ex.type === 'play-interval' && <PlayInterval spec={ex} {...props} />}
-          {ex.type === 'name-interval' && <NameInterval spec={ex} {...props} />}
-          {ex.type === 'hear-interval' && <HearInterval spec={ex} {...props} />}
+          <ExerciseView spec={ex} {...props} />
           <Button variant="ghost" className="mt-6 self-start" onClick={() => setPhase('teach')}>
             <ArrowLeft className="size-4" aria-hidden /> Rever explicação
           </Button>

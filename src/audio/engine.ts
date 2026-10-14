@@ -72,6 +72,13 @@ export function playInterval(root: number, semis: number, harmonic = false) {
   } else playSequence([root, root + semis], 0.6)
 }
 
+/** Toca um acorde: plaqueado (todas juntas, com um leve rasgueado) ou arpejado (nota a nota). */
+export function playChord(midis: number[], arpeggio = false, when = 0) {
+  const c = audioCtx()
+  const t = (when || c.currentTime) + 0.05
+  midis.forEach((m, i) => playNote(m, t + i * (arpeggio ? 0.28 : 0.025), arpeggio ? 0.55 : 0.4))
+}
+
 export function playClick(when: number, accent = false) {
   const c = audioCtx()
   const osc = c.createOscillator()
