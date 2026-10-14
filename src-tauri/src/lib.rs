@@ -47,6 +47,44 @@ fn free_path(dir: PathBuf, name: &str) -> PathBuf {
         .unwrap_or(candidate)
 }
 
+/// Gancho de download das janelas do Songsterr: salva em Downloads sem sobrescrever e avisa o FretLab
+/// (que importa o arquivo na biblioteca). Um pop-up que só servia para baixar fecha sozinho no fim.
+fn download_handler(handle: AppHandle) -> impl Fn(tauri::Webview, DownloadEvent) -> bool + Send + Sync + 'static {
+    move |webview, event| {
+        match event {
+            DownloadEvent::Requested { url, destination } => {
+                // nome sugerido pelo site (ou o fim da URL)
+                let name = destination
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .filter(|n| !n.is_empty())
+                    .or_else(|| url.path_segments().and_then(|mut s| s.next_back().map(String::from)))
+                    .unwrap_or_else(|| "songsterr-download".into());
+                let dir = handle.path().download_dir().unwrap_or_else(|_| std::env::temp_dir());
+                *destination = free_path(dir, &name);
+            }
+            DownloadEvent::Finished { path, success, .. } => {
+                if let (true, Some(path)) = (success, path) {
+                    handle.state::<Downloads>().0.lock().unwrap().insert(path.clone());
+                    let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                    // a página da música é a da janela principal do Songsterr (o pop-up não tem)
+                    let page_url = handle
+                        .get_webview_window("songsterr")
+                        .and_then(|w| w.url().ok())
+                        .or_else(|| webview.url().ok())
+                        .map(|u| u.to_string());
+                    let _ = handle.emit_to("main", "songsterr-download", DownloadDone { path: path.to_string_lossy().to_string(), name, page_url });
+                }
+                if webview.label().starts_with("songsterr-popup") {
+                    let _ = webview.window().close();
+                }
+            }
+            _ => {}
+        }
+        true
+    }
+}
+
 /// Abre (ou reaproveita) o Songsterr na metade direita da tela e encaixa o FretLab na esquerda.
 #[tauri::command]
 fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
@@ -81,7 +119,9 @@ fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
             let built = WebviewWindowBuilder::new(&popup_app, format!("songsterr-popup-{n}"), WebviewUrl::External("about:blank".parse().expect("about:blank")))
                 .window_features(features)
                 .user_agent(SAFARI_UA)
-                .title("Entrar · Songsterr")
+                .title("Songsterr")
+                // o Songsterr baixa o Guitar Pro por uma janela nova: ela também precisa avisar o FretLab
+                .on_download(download_handler(popup_app.clone()))
                 .build();
             match built {
                 Ok(window) => tauri::webview::NewWindowResponse::Create { window },
@@ -90,31 +130,7 @@ fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
         })
         .position(origin.x + half, origin.y)
         .inner_size(size.width - half, size.height)
-        .on_download(move |webview, event| {
-            match event {
-                DownloadEvent::Requested { url, destination } => {
-                    // nome sugerido pelo site (ou o fim da URL); salva em Downloads sem sobrescrever
-                    let name = destination
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .filter(|n| !n.is_empty())
-                        .or_else(|| url.path_segments().and_then(|mut s| s.next_back().map(String::from)))
-                        .unwrap_or_else(|| "songsterr-download".into());
-                    let dir = handle.path().download_dir().unwrap_or_else(|_| std::env::temp_dir());
-                    *destination = free_path(dir, &name);
-                }
-                DownloadEvent::Finished { path, success, .. } => {
-                    if let (true, Some(path)) = (success, path) {
-                        handle.state::<Downloads>().0.lock().unwrap().insert(path.clone());
-                        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                        let page_url = webview.url().ok().map(|u| u.to_string());
-                        let _ = handle.emit_to("main", "songsterr-download", DownloadDone { path: path.to_string_lossy().to_string(), name, page_url });
-                    }
-                }
-                _ => {}
-            }
-            true
-        })
+        .on_download(download_handler(handle))
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
