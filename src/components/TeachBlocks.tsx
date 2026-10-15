@@ -121,7 +121,7 @@ function Block({ block }: { block: TeachBlock }) {
       const events = parsePattern(block.pattern)
       return (
         <figure className="panel p-3">
-          <RhythmStaff events={events} />
+          <RhythmStaff events={events} marks={block.marks} />
           <figcaption className="mt-2 flex items-center justify-between gap-3 px-1 text-sm text-pearl-dim">
             {block.caption}
             <Button variant="secondary" onClick={() => previewPattern(events, 70, inst.openMidi[0] + 12)}>

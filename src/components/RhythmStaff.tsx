@@ -8,6 +8,7 @@ const G = {
   flag16: '',
   dot: '',
   tuplet3: '',
+  headX: '\uE0A9',
 }
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6
 
@@ -25,6 +26,8 @@ interface Props {
   playhead?: number | null // posição em tempos
   beats?: number
   showCounts?: boolean
+  /** técnica por ataque (não-pausa): "T"/"P" do slap, "⊓"/"V" da palhetada; "x" = ghost note (cabeça em x) */
+  marks?: string[]
 }
 
 const BEAT_W = 92
@@ -33,7 +36,7 @@ const LINE_Y = 70
 const FS = 40
 const SP = FS / 4 // um espaço de pauta
 
-export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCounts = true }: Props) {
+export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCounts = true, marks }: Props) {
   const width = PAD_L * 2 + BEAT_W * beats
   const xOf = (beat: number) => PAD_L + beat * BEAT_W + 6
 
@@ -80,7 +83,8 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
             </text>
           )
         }
-        const head = it.figure === 'whole' ? G.head.whole : it.figure === 'half' ? G.head.half : G.head.black
+        const mark = it.onset >= 0 ? marks?.[it.onset] : undefined
+        const head = mark === 'x' ? G.headX : it.figure === 'whole' ? G.head.whole : it.figure === 'half' ? G.head.half : G.head.black
         const hasStem = it.figure !== 'whole'
         const flag = !beamed.has(it) && (it.figure === 'eighth' ? G.flag8 : it.figure === 'sixteenth' ? G.flag16 : null)
         return (
@@ -88,6 +92,11 @@ export function RhythmStaff({ events, hits, playhead = null, beats = 4, showCoun
             <text x={x} y={LINE_Y} fontFamily="Bravura" fontSize={FS} stroke="none">
               {head}
             </text>
+            {mark && mark !== 'x' && (
+              <text x={x + headW / 2} y={14} textAnchor="middle" fontFamily="var(--font-mono)" fontSize={13} fontWeight={700} fill="var(--color-enclosure)" stroke="none">
+                {mark}
+              </text>
+            )}
             {it.dotted && (
               <text x={x + headW + SP * 0.5} y={LINE_Y - SP * 0.5} fontFamily="Bravura" fontSize={FS} stroke="none">
                 {G.dot}

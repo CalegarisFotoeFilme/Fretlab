@@ -145,6 +145,11 @@ describe('currículo', () => {
       }
       if (ex.type === 'rhythm') {
         ex.patterns.forEach((p) => expect(totalBeats(parsePattern(p)), `${l.id}: ${p}`).toBe(4))
+        // símbolos de técnica: um por ataque
+        if (ex.marks) {
+          expect(ex.marks.length, l.id).toBe(ex.patterns.length)
+          ex.patterns.forEach((p, i) => expect(ex.marks![i].length, `${l.id}: ${p}`).toBe(parsePattern(p).filter((e) => !e.rest).length))
+        }
       }
       if (ex.type === 'quiz') {
         ex.questions.forEach((q) => expect(q.answer).toBeLessThan(q.options.length))

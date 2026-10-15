@@ -1,6 +1,9 @@
 import type { ShapeAnchor, World } from './types'
 
 const low = (offset: number, name: string): ShapeAnchor => ({ string: 0, offset, width: 3, name })
+const D = '⊓'
+const U = 'V'
+const PM = 'PM'
 const majLow = low(-1, 'fundamental na corda mais grave')
 const minLow = low(0, 'fundamental na corda mais grave')
 const E: ShapeAnchor = { string: 0, offset: 0, width: 3, name: 'pestana na forma de E' }
@@ -21,10 +24,17 @@ export const world11: World = {
       teach: [
         { kind: 'text', text: 'Na palhetada alternada, cada nota troca a direção da palheta: para baixo (⊓) e para cima (V). Nas semicolcheias, a regra é simples: no tempo e no "e" a palheta desce; no "e" e no "a" (as semicolcheias de dentro), sobe.' },
         { kind: 'text', text: 'Segure a palheta entre o polegar e a lateral do indicador, com pouca ponta para fora. O movimento é pequeno e vem do pulso, como sacudir uma gota de água.' },
-        { kind: 'rhythm', pattern: 's s s s s s s s q q', caption: 'Semicolcheias: ⊓ V ⊓ V ⊓ V ⊓ V.' },
+        { kind: 'rhythm', pattern: 's s s s s s s s q q', caption: 'Semicolcheias: ⊓ V ⊓ V ⊓ V ⊓ V.', marks: [D, U, D, U, D, U, D, U, D, D] },
         { kind: 'tip', text: 'Quando houver pausa, a mão continua subindo e descendo no ar: assim a direção da próxima nota nunca se perde.' },
       ],
-      exercise: { type: 'rhythm', input: 'play', bpm: 60, patterns: ['s s s s s s s s q q', 'e e s s s s e e s s s s', 'q s s s s q s s s s', 's s s s q s s s s q'] },
+      exercise: { type: 'rhythm', input: 'play', bpm: 60, patterns: ['s s s s s s s s q q', 'e e s s s s e e s s s s', 'q s s s s q s s s s', 's s s s q s s s s q'],
+        marks: [
+          [D, U, D, U, D, U, D, U, D, D],
+          [D, D, D, U, D, U, D, D, D, U, D, U],
+          [D, D, U, D, U, D, D, U, D, U],
+          [D, U, D, U, D, D, U, D, U, D],
+        ],
+      },
       rounds: 5,
     },
     {
@@ -34,10 +44,17 @@ export const world11: World = {
       teach: [
         { kind: 'text', text: 'No palm mute (P.M.), a lateral da mão direita encosta de leve nas cordas, logo em cima da ponte. A nota sai curta e grave, com aquele "chug". Muito para frente, a nota some; muito para trás, não abafa nada.' },
         { kind: 'text', text: 'O contraste entre notas abafadas e abertas é o que dá peso a um riff: as abertas aparecem como acentos.' },
-        { kind: 'rhythm', pattern: 'e e e e e e q', caption: 'Colcheias abafadas e uma semínima aberta no fim.' },
+        { kind: 'rhythm', pattern: 'e e e e e e q', caption: 'Colcheias abafadas (PM) e uma semínima aberta no fim.', marks: [PM, PM, PM, PM, PM, PM, ''] },
         { kind: 'tip', text: 'Use palhetadas para baixo nas colcheias abafadas: o som fica mais firme e igual.' },
       ],
-      exercise: { type: 'rhythm', input: 'play', bpm: 80, patterns: ['e e e e e e q', 'e e q e e q', 's s e s s e e e q', 'e e re e e e re e'] },
+      exercise: { type: 'rhythm', input: 'play', bpm: 80, patterns: ['e e e e e e q', 'e e q e e q', 's s e s s e e e q', 'e e re e e e re e'],
+        marks: [
+          [PM, PM, PM, PM, PM, PM, ''],
+          [PM, PM, '', PM, PM, ''],
+          [PM, PM, PM, PM, PM, PM, PM, PM, ''],
+          [PM, PM, PM, PM, PM, PM],
+        ],
+      },
       rounds: 5,
     },
     {

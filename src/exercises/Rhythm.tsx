@@ -135,7 +135,7 @@ export function Rhythm({ spec, onRoundDone, round }: ExerciseProps<RhythmSpec>) 
       </div>
 
       <div className="panel px-2 py-3">
-        <RhythmStaff events={events} playhead={playhead} hits={hitsForStaff} />
+        <RhythmStaff events={events} playhead={playhead} hits={hitsForStaff} marks={spec.marks?.[round % spec.patterns.length]} />
       </div>
 
       {phase !== 'done' && <Hint key={round} lines={rhythmHints(onsetBeats(events))} />}

@@ -30,6 +30,8 @@ export interface RhythmSpec {
   bpm: number
   /** Notação compacta: w h q e s; prefixo r = pausa. Ex.: "q e e rq q" */
   patterns: string[]
+  /** técnica de cada ataque, por padrão (mesma ordem de `patterns`): "T", "P", "x", "⊓", "V" */
+  marks?: string[][]
 }
 
 export interface QuizQuestion {
@@ -164,7 +166,7 @@ export type TeachBlock =
   | { kind: 'tip'; text: string }
   | { kind: 'open-strings' }
   | { kind: 'fretboard'; pool: NotePool; strings: StringSel; frets: FretRange; caption: string; octaves?: boolean }
-  | { kind: 'rhythm'; pattern: string; caption: string }
+  | { kind: 'rhythm'; pattern: string; caption: string; marks?: string[] }
   | { kind: 'figures' }
   /** forma de um intervalo no braço, a partir de uma fundamental na corda indicada (0 = mais grave) */
   | { kind: 'interval'; semitones: number; string?: number; caption: string }

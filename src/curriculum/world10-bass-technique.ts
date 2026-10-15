@@ -1,6 +1,8 @@
 import type { ShapeAnchor, World } from './types'
 
 const low = (offset: number, name: string): ShapeAnchor => ({ string: 0, offset, width: 3, name })
+/** dedos alternados: i-m-i-m… */
+const im = (n: number) => Array.from({ length: n }, (_, k) => (k % 2 ? 'm' : 'i'))
 const majLow = low(-1, 'fundamental na corda mais grave')
 const minLow = low(0, 'fundamental na corda mais grave')
 
@@ -19,10 +21,10 @@ export const world10: World = {
       teach: [
         { kind: 'text', text: 'O pizzicato do baixo elétrico usa indicador (i) e médio (m), alternando sempre: i-m-i-m. Mesmo quando muda de corda, a alternância continua. É ela que dá som igual e velocidade.' },
         { kind: 'text', text: 'Use o "rest stroke": depois de puxar a corda, o dedo para apoiado na corda de baixo (a mais grave seguinte). O som fica mais cheio e a corda vizinha já fica abafada.' },
-        { kind: 'rhythm', pattern: 'e e e e e e e e', caption: 'Oito colcheias: i-m-i-m-i-m-i-m.' },
+        { kind: 'rhythm', pattern: 'e e e e e e e e', caption: 'Oito colcheias: i-m-i-m-i-m-i-m.', marks: im(8) },
         { kind: 'tip', text: 'Ataque perto do captador da ponte para um som mais seco; mais perto do braço, o som fica mais redondo. O dedo puxa para dentro, não para cima.' },
       ],
-      exercise: { type: 'rhythm', input: 'play', bpm: 70, patterns: ['e e e e e e e e', 'q e e q e e', 'e e q e e q', 'q q e e e e'] },
+      exercise: { type: 'rhythm', input: 'play', bpm: 70, patterns: ['e e e e e e e e', 'q e e q e e', 'e e q e e q', 'q q e e e e'], marks: [im(8), im(6), im(6), im(6)] },
       rounds: 5,
     },
     {
@@ -45,10 +47,17 @@ export const world10: World = {
       teach: [
         { kind: 'text', text: 'Ghost note (nota fantasma, escrita com "x" na tab) é um ataque com a corda abafada pela mão esquerda: sai um "tuc" percussivo, sem altura definida. Ela preenche as semicolcheias entre as notas reais e é a alma do funk.' },
         { kind: 'text', text: 'Para tocar: encoste os dedos da mão esquerda na corda sem apertar contra a casa e ataque normalmente. A mão direita não muda nada; quem decide se a nota soa ou não é a esquerda.' },
-        { kind: 'rhythm', pattern: 'e s s e s s q q', caption: 'A colcheia é a nota real; as semicolcheias podem ser ghost notes.' },
+        { kind: 'rhythm', pattern: 'e s s e s s q q', caption: 'A colcheia é a nota real; as semicolcheias (x) são ghost notes.', marks: ['', 'x', 'x', '', 'x', 'x', '', ''] },
         { kind: 'tip', text: 'Toque as ghost notes mais fracas que as notas reais. O app conta todos os ataques, então toque todas as figuras.' },
       ],
-      exercise: { type: 'rhythm', input: 'play', bpm: 66, patterns: ['e s s e s s q q', 's s s s s s s s q q', 'q e s s q e s s', 'e s s q e s s q'] },
+      exercise: { type: 'rhythm', input: 'play', bpm: 66, patterns: ['e s s e s s q q', 's s s s s s s s q q', 'q e s s q e s s', 'e s s q e s s q'],
+        marks: [
+          ['', 'x', 'x', '', 'x', 'x', '', ''],
+          ['', 'x', 'x', 'x', '', 'x', 'x', 'x', '', ''],
+          ['', '', 'x', 'x', '', '', 'x', 'x'],
+          ['', 'x', 'x', '', '', 'x', 'x', ''],
+        ],
+      },
       rounds: 5,
     },
     {
@@ -58,10 +67,17 @@ export const world10: World = {
       teach: [
         { kind: 'text', text: 'No slap, o polegar (T, de thumb) bate na corda grave perto do fim do braço e quica, como uma baqueta. O indicador ou o médio (P, de pop) engancha uma corda aguda e solta, fazendo ela estalar contra os trastes.' },
         { kind: 'text', text: 'O padrão mais clássico é a oitava: T na fundamental (por exemplo, corda E solta) e P na mesma nota uma oitava acima (2 cordas acima, 2 casas à frente). Entre um e outro, a mão esquerda abafa.' },
-        { kind: 'rhythm', pattern: 'e e e e q q', caption: 'T-P-T-P e duas semínimas de polegar.' },
+        { kind: 'rhythm', pattern: 'e e e e q q', caption: 'T-P-T-P e duas semínimas de polegar.', marks: ['T', 'P', 'T', 'P', 'T', 'T'] },
         { kind: 'tip', text: 'O movimento vem do giro do antebraço, como girar uma maçaneta, e não do polegar dobrando. Comece bem devagar; o som limpo vem antes da força.' },
       ],
-      exercise: { type: 'rhythm', input: 'play', bpm: 70, patterns: ['e e e e q q', 'e e re e e e re e', 's s e s s e q q', 'e s s e s s e s s e s s'] },
+      exercise: { type: 'rhythm', input: 'play', bpm: 70, patterns: ['e e e e q q', 'e e re e e e re e', 's s e s s e q q', 'e s s e s s e s s e s s'],
+        marks: [
+          ['T', 'P', 'T', 'P', 'T', 'T'],
+          ['T', 'P', 'T', 'T', 'P', 'T'],
+          ['T', 'T', 'P', 'T', 'T', 'P', 'T', 'P'],
+          ['T', 'x', 'P', 'T', 'x', 'P', 'T', 'x', 'P', 'T', 'x', 'P'],
+        ],
+      },
       rounds: 5,
     },
     {
