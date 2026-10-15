@@ -13,7 +13,7 @@ describe('Treino do Dia', () => {
         for (let root = 0; root < 12; root++) {
           const seq = drillSequence(inst, drill, root, pos)
           // arpejos nas cordas agudas do baixo de 4 cordas têm menos notas (só sobram 2–3 cordas)
-          expect(seq.length, `${drill.id} ${inst.kind} ${root} ${pos}`).toBeGreaterThanOrEqual(drill.id === 'arpejos' || drill.id === 'sweep' ? 5 : 8)
+          expect(seq.length, `${drill.id} ${inst.kind} ${root} ${pos}`).toBeGreaterThanOrEqual(drill.id === 'arpejos' || drill.id === 'sweep' || drill.id === 'caged' ? 5 : 8)
           for (const p of seq) {
             expect(p.string).toBeLessThan(inst.openMidi.length)
             expect(p.fret).toBeGreaterThanOrEqual(0)

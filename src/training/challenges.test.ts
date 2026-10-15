@@ -39,3 +39,16 @@ describe('desafios do Treino', () => {
     for (let i = 0; i < 30; i++) expect(makeChallenge(inst, drill, name, Math.random, 'todas').kind).not.toBe('todas')
   })
 })
+
+describe('CAGED', () => {
+  it('cada forma tem só notas do acorde e a fundamental', async () => {
+    const { cagedShape } = await import('./drills')
+    for (const inst of instruments)
+      for (let root = 0; root < 12; root++)
+        for (let k = 0; k < 5; k++) {
+          const pcs = cagedShape(inst, root, k).map((p) => mod12(midiAt(inst, p)))
+          expect(pcs, `${inst.kind} ${root} ${k}`).toContain(root)
+          for (const pc of pcs) expect([root, mod12(root + 4), mod12(root + 7)]).toContain(pc)
+        }
+  })
+})

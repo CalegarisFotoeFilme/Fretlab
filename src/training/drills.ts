@@ -31,6 +31,35 @@ export interface Drill {
   instrument?: 'bass' | 'guitar'
 }
 
+/** As cinco formas do CAGED: corda da fundamental (0 = mais grave), início da janela e largura. */
+export const CAGED_SHAPES = [
+  { name: 'C', string: 1, offset: -3, width: 3 },
+  { name: 'A', string: 1, offset: 0, width: 3 },
+  { name: 'G', string: 0, offset: -3, width: 3 },
+  { name: 'E', string: 0, offset: 0, width: 3 },
+  { name: 'D', string: 2, offset: 0, width: 3 },
+] as const
+
+/** Notas de um acorde (intervalos a partir da fundamental) dentro da forma do CAGED, da mais grave à mais aguda. */
+export function cagedShape(inst: Instrument, root: number, shape: number, intervals: readonly number[] = [0, 4, 7]): FretPos[] {
+  const sh = CAGED_SHAPES[shape % CAGED_SHAPES.length]
+  const s = Math.min(sh.string, inst.openMidi.length - 1)
+  const f = fretOn(inst, s, root, Math.max(1, -sh.offset))
+  const lo = f + sh.offset
+  const pcs = intervals.map((i) => mod12(root + i))
+  const byPitch = new Map<number, FretPos>()
+  inst.openMidi.forEach((open, string) => {
+    for (let fret = lo; fret <= lo + sh.width; fret++) {
+      const midi = open + fret
+      if (pcs.includes(mod12(midi)) && !byPitch.has(midi)) byPitch.set(midi, { string, fret })
+    }
+  })
+  return fitNeck(inst, [...byPitch.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p))
+}
+
+/** Casa onde começa a janela da forma (para ordenar as formas pelo braço). */
+export const cagedStart = (inst: Instrument, root: number, shape: number) => Math.min(...cagedShape(inst, root, shape).map((p) => p.fret))
+
 const ARPEGGIO_SHAPES = [
   { string: 0, name: 'forma de E (fundamental na corda mais grave)' },
   { string: 1, name: 'forma de A (fundamental na 2ª corda)' },
@@ -107,6 +136,20 @@ export const DRILLS: Drill[] = [
     usesKey: true,
     lesson: 'w3-oitava',
     tips: ['A mão que toca precisa “pular” a corda do meio: mire a corda de cima com calma no começo, mesmo se o andamento ficar lento.', 'Abafe a corda do meio com a parte de baixo do dedo que pressiona a nota grave; no baixo, também dá para usar o polegar ou a palma da mão que toca.'],
+  },
+  {
+    id: 'caged',
+    title: 'CAGED pelo braço',
+    focus: 'as cinco formas do acorde maior, no mesmo tom',
+    why: 'O CAGED liga o braço inteiro com cinco desenhos de acorde (C, A, G, E e D) que se encaixam um no outro. Tocando as notas de cada forma como arpejo, você passa a enxergar o acorde (e a escala em volta dele) em qualquer região, não só na pestana que já conhece.',
+    how: 'Toque as notas do acorde dentro da forma, da mais grave à mais aguda e de volta, uma por vez. As fundamentais (laranja) mostram de qual forma você está saindo.',
+    perBeat: 2,
+    startBpm: 60,
+    positions: 5,
+    positionLabel: (i) => `forma de ${CAGED_SHAPES[i].name}`,
+    usesKey: true,
+    lesson: 'w6-conectar',
+    tips: ['Procure primeiro a fundamental na corda indicada pela forma (C e A: 2ª corda mais grave; G e E: a mais grave; D: a 3ª). O resto do acorde fica em volta dela.', 'A ordem C-A-G-E-D se repete subindo o braço: o fim de uma forma é o começo da próxima.'],
   },
   {
     id: 'slap',
@@ -275,6 +318,8 @@ export function drillSequence(inst: Instrument, drill: Drill, root: number, posi
       ]).flat()
       return fitNeck(inst, seq)
     }
+    case 'caged':
+      return upAndDown(cagedShape(inst, root, pos))
     case 'slap': {
       const low = Math.min(pos, n - 3)
       const high = low + 2

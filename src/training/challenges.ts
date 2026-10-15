@@ -1,6 +1,6 @@
 import { midiAt, stringNumber, type FretPos, type Instrument } from '../theory/instrument'
 import { SCALES, mod12 } from '../theory/notes'
-import { arpeggio, fitNeck, fretOn, scaleByString, upAndDown, type Drill } from './drills'
+import { CAGED_SHAPES, arpeggio, cagedShape, cagedStart, fitNeck, fretOn, scaleByString, upAndDown, type Drill } from './drills'
 
 /*
   Desafios do Treino: em vez de repetir sempre o mesmo desenho, cada "Novo desafio" sorteia uma
@@ -133,6 +133,32 @@ export function makeChallenge(inst: Instrument, drill: Drill, name: NameFn, rng:
     case 'maior':
     case 'legato':
       return scaleChallenge(inst, drill, root, name, rng, avoid)
+    case 'caged': {
+      const kinds = ['todas', 'conectar', 'forma'].filter((k) => k !== avoid)
+      const kind = pick(kinds, rng)
+      // formas na ordem em que aparecem subindo o braço neste tom
+      const along = [0, 1, 2, 3, 4].sort((a, b) => cagedStart(inst, root, a) - cagedStart(inst, root, b))
+      const label = (k: number) => `Forma de ${CAGED_SHAPES[k].name}`
+      if (kind === 'forma') {
+        const k = Math.floor(rng() * 5)
+        const q = pick([['maior', [0, 4, 7], ''], ['menor', [0, 3, 7], 'm'], ['com sétima', [0, 4, 7, 10], '7']] as const, rng)
+        return {
+          kind, root, perBeat: 2,
+          title: `${label(k)} de ${name(root)}${q[2]} (acorde ${q[1]})`,
+          goal: 'A mesma região do braço serve para o acorde maior, menor ou com sétima: só a 3ª ou a 7ª mudam de casa. Ache cada uma dentro da forma.',
+          seq: upAndDown(cagedShape(inst, root, k, q[1])),
+        }
+      }
+      const n = kind === 'todas' ? 5 : 2
+      const first = kind === 'todas' ? 0 : Math.floor(rng() * 4)
+      const shapes = along.slice(first, first + n)
+      return {
+        kind, root, perBeat: 2,
+        title: kind === 'todas' ? `As 5 formas do CAGED de ${name(root)}, pelo braço` : `Conecte as formas de ${shapes.map((k) => CAGED_SHAPES[k].name).join(' e ')} de ${name(root)}`,
+        goal: 'Subindo o braço as formas se encaixam na ordem C-A-G-E-D (e recomeçam). Repare nas notas que duas formas vizinhas dividem: é por elas que você troca de região sem perder o acorde.',
+        ...zigzag(shapes.map((k) => cagedShape(inst, root, k)), shapes.map((k) => `${label(k)} (fundamental na ${['mais grave', '2ª', '3ª'][CAGED_SHAPES[k].string]} corda)`), shapes.map((k) => CAGED_SHAPES[k].name)),
+      }
+    }
     case 'arpejos':
     case 'sweep': {
       const minor = rng() < 0.5
