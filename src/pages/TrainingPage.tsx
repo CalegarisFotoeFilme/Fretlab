@@ -113,6 +113,9 @@ export function TrainingPage() {
 
 // ---------- Aquecimento técnico ----------
 
+/** sorteio fora do componente (regras do React Compiler) */
+const pickRandom = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)]
+
 function DrillPanel() {
   const inst = useInstrument()
   const instKind = inst.kind
@@ -157,11 +160,20 @@ function DrillPanel() {
   const [challenge, setChallenge] = useState<Challenge | null>(null)
   /** trecho do desafio em foco (null = o desafio inteiro) */
   const [part, setPart] = useState<number | null>(null)
+  // de onde vem o sorteio: só o tom (tema fixo), só o tema (tom fixo) ou tudo
+  const [scope, setScope] = useState<'tema' | 'tom' | 'tudo'>('tema')
   const newChallenge = () => {
     stop()
     stopPreview()
     setFeedback(null)
-    const c = makeChallenge(inst, drill, (pc) => noteName(pc, prefersFlats(pc)), Math.random, challenge?.kind)
+    const pool = drillsFor(instKind)
+    const keyed = pool.filter((d) => d.usesKey)
+    const target = scope === 'tudo' ? pickRandom(pool) : scope === 'tom' ? pickRandom(keyed) : drill
+    if (target.id !== drillId) {
+      setDrillId(target.id)
+      setBpm(null)
+    }
+    const c = makeChallenge(inst, target, (pc) => noteName(pc, prefersFlats(pc)), Math.random, target.id === drill.id ? challenge?.kind : undefined, scope === 'tom' ? root : undefined)
     setChallenge(c)
     // desafio em trechos (caixas): começa estudando o primeiro
     setPart(c.parts ? 0 : null)
@@ -287,6 +299,16 @@ function DrillPanel() {
         </div>
         <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={drillsFor(instKind).map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
 
+        <Segmented<'tema' | 'tom' | 'tudo'>
+          label="Sorteio do desafio"
+          value={scope}
+          onChange={setScope}
+          options={[
+            { value: 'tema', label: 'Neste tema' },
+            { value: 'tom', label: `No tom de ${noteName(root, prefersFlats(root))}` },
+            { value: 'tudo', label: 'Tudo aleatório' },
+          ]}
+        />
         {challenge ? (
           <div className="rounded-xl border border-enclosure/50 bg-enclosure/10 p-4">
             <p className="eyebrow flex items-center gap-2"><Shuffle className="size-4" aria-hidden /> Desafio</p>
@@ -316,7 +338,7 @@ function DrillPanel() {
           </Button>
         )}
 
-        {!challenge && drill.usesKey && (
+        {(!challenge || scope === 'tom') && drill.usesKey && (
           <div>
             <p className="eyebrow mb-1.5">
               Tom {root === keyToday ? <span className="text-enclosure">· tom do dia</span> : <button className="underline normal-case tracking-normal" onClick={() => setRoot(keyToday)}>voltar ao tom do dia ({noteName(keyToday, prefersFlats(keyToday))})</button>}

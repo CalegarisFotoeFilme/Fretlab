@@ -124,8 +124,9 @@ function chordTones(inst: Instrument, pc: number, q: keyof typeof QUALITY, strin
 }
 
 /** Sorteia um desafio sobre o tema do exercício. `avoid` = tipo do último, para variar. */
-export function makeChallenge(inst: Instrument, drill: Drill, name: NameFn, rng: Rng = Math.random, avoid?: string): Challenge {
-  const root = Math.floor(rng() * 12)
+export function makeChallenge(inst: Instrument, drill: Drill, name: NameFn, rng: Rng = Math.random, avoid?: string, fixedRoot?: number): Challenge {
+  // tom sorteado, ou o tom pedido (desafio "neste tom")
+  const root = fixedRoot ?? Math.floor(rng() * 12)
   const n = inst.openMidi.length
   switch (drill.id) {
     case 'pentatonica':
