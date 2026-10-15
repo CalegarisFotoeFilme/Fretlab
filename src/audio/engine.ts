@@ -50,6 +50,30 @@ export function setNoteVoice(v: NoteVoice | null) {
   noteVoice = v
 }
 
+// notas soando (sintetizador e SoundFont), para poder calar tudo de uma vez
+const sounding = new Set<{ src: AudioScheduledSourceNode; gain: GainNode }>()
+/** Registra uma nota tocada, para `silenceNotes` conseguir cortá-la. */
+export function trackNote(src: AudioScheduledSourceNode, gain: GainNode) {
+  const entry = { src, gain }
+  sounding.add(entry)
+  src.addEventListener('ended', () => sounding.delete(entry))
+}
+/** Corta (com um fade curtíssimo, sem estalo) as notas que já começaram a soar. */
+export function silenceNotes() {
+  const c = audioCtx()
+  const t = c.currentTime
+  for (const e of sounding) {
+    e.gain.gain.cancelScheduledValues(t)
+    e.gain.gain.setTargetAtTime(0, t, 0.01)
+    try {
+      e.src.stop(t + 0.06)
+    } catch {
+      // alguns navegadores não aceitam um segundo stop(): o fade já silenciou
+    }
+  }
+  sounding.clear()
+}
+
 /** `synth` = sempre o sintetizador próprio, ignorando o timbre do instrumento. */
 export function playNote(midi: number, when = 0, gain = 0.6, synth = false) {
   const c = audioCtx()
@@ -64,6 +88,7 @@ export function playNote(midi: number, when = 0, gain = 0.6, synth = false) {
   lp.frequency.value = Math.min(6000, midiToFreq(midi) * 10)
   src.connect(lp).connect(g).connect(c.destination)
   src.start(when || c.currentTime)
+  trackNote(src, g)
 }
 
 export function playSequence(midis: number[], gapSec = 0.35) {

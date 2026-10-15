@@ -1,6 +1,6 @@
 import { Ear, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { audioCtx, playClick, playNote, uiSound } from '../audio/engine'
+import { audioCtx, playClick, playNote, silenceNotes, uiSound } from '../audio/engine'
 import { GM, type SoundFont } from '../audio/sf2'
 import { loadVoices, playVoice } from '../audio/sfVoice'
 import { useInstrument } from '../progress/settings'
@@ -55,7 +55,8 @@ export function IntervalEar() {
   const [question, setQuestion] = useState<EarQuestion | null>(null)
   const [chosen, setChosen] = useState<number | null>(null)
   const [score, setScore] = useState<Score>(EMPTY)
-  const [replay, setReplay] = useState(true)
+  // desligado por padrão: a repetição do tempo 4 podia se misturar com o tempo 1 seguinte
+  const [replay, setReplay] = useState(false)
   const inst = useInstrument()
   const [timbre, setTimbre] = useState<EarTimbre>(inst.kind === 'guitar6' ? 'guitar' : 'bass')
   const [sf, setSf] = useState<SoundFont | null>(null)
@@ -81,6 +82,8 @@ export function IntervalEar() {
         answer.current = null
         setChosen(null)
         setQuestion(q)
+        // o que ainda soa do "confira" é cortado: o tempo 1 começa limpo
+        silenceNotes()
         playEar(q, beatMs / 1000, timbre, sf)
       }
       if (b === 3 && q) {

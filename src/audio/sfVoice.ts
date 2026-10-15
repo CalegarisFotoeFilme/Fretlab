@@ -1,4 +1,4 @@
-import { audioCtx, setNoteVoice } from './engine'
+import { audioCtx, setNoteVoice, trackNote } from './engine'
 import { GM, parseSf2, playbackRate, zonesFor, type SoundFont } from './sf2'
 
 /*
@@ -72,6 +72,7 @@ export function playVoice(sf: SoundFont, program: number, midi: number, when: nu
     src.connect(g).connect(c.destination)
     src.start(when, offset)
     src.stop(when + duration + 0.35)
+    trackNote(src, g)
   }
   return true
 }
