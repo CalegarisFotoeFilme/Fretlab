@@ -96,8 +96,8 @@ type SongBackup = Omit<Song, 'id' | 'file'> & { file?: string }
 
 /** Backup dos estudos: lições, dias, treino. */
 export async function exportProgress() {
-  const [lessons, days, drills] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray()])
-  return JSON.stringify({ app: 'fretlab', kind: 'progress', version: 2, exportedAt: new Date().toISOString(), lessons, days, drills })
+  const [lessons, days, drills, facts] = await Promise.all([db.lessons.toArray(), db.days.toArray(), db.drills.toArray(), db.facts.toArray()])
+  return JSON.stringify({ app: 'fretlab', kind: 'progress', version: 3, exportedAt: new Date().toISOString(), lessons, days, drills, facts })
 }
 
 /** Backup da biblioteca: músicas com arquivo, sincronia do YouTube e volumes. */
@@ -119,10 +119,11 @@ export async function importBackup(json: string) {
   if (data.app !== 'fretlab') throw new Error('Este arquivo não é um backup do FretLab.')
   const done: string[] = []
   if (Array.isArray(data.lessons)) {
-    await db.transaction('rw', db.lessons, db.days, db.drills, async () => {
+    await db.transaction('rw', [db.lessons, db.days, db.drills, db.facts], async () => {
       await db.lessons.bulkPut(data.lessons)
       if (Array.isArray(data.days)) await db.days.bulkPut(data.days)
       if (Array.isArray(data.drills)) await db.drills.bulkPut(data.drills)
+      if (Array.isArray(data.facts)) await db.facts.bulkPut(data.facts)
     })
     done.push('progresso dos estudos')
   }

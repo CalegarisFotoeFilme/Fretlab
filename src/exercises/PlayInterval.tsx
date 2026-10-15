@@ -1,5 +1,5 @@
 import { Mic, MicOff, SkipForward, Volume2 } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { playIntervalHints } from './hints'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playInterval, playNote, uiSound } from '../audio/engine'
@@ -27,6 +27,7 @@ export function PlayInterval({ spec, onRoundDone, round }: ExerciseProps<PlayInt
   const prevRound = useRef(round)
   const rootMidi = midiAt(inst, q.root)
   const iv = INTERVALS[q.semis]
+  useFact(`play-interval:${q.semis}`, `Tocar a ${iv.name.toLowerCase()}`)
 
   useEffect(() => {
     if (prevRound.current === round) return

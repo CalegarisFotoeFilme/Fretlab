@@ -1,5 +1,5 @@
 import { Volume2 } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { nameIntervalHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playInterval, uiSound } from '../audio/engine'
@@ -31,6 +31,7 @@ export function NameInterval({ spec, onRoundDone, round }: ExerciseProps<NameInt
   const [answer, setAnswer] = useState<number | null>(null)
   const prevRound = useRef(round)
   const rootMidi = midiAt(inst, q.root)
+  useFact(`shape-interval:${q.semis}`, `Forma da ${INTERVALS[q.semis].name.toLowerCase()}`)
 
   useEffect(() => {
     if (prevRound.current === round) return

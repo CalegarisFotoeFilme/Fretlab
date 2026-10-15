@@ -10,6 +10,7 @@ import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { findLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
+import { dueFacts } from '../progress/facts'
 import { db } from '../progress/db'
 import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
@@ -32,6 +33,10 @@ export function TrainingPage() {
         .map((d) => findLesson(d.lessonId)?.lesson)
         .filter((l): l is Lesson => !!l)
     : []
+
+  // pontos fracos: fatos errados vencidos e as lições que treinam cada um
+  const facts = dueFacts(useLiveQuery(() => db.facts.toArray(), []) ?? [])
+  const factLessons = [...new Set(facts.map((f) => f.lessonId))].map((id) => findLesson(id)?.lesson).filter((l): l is Lesson => !!l)
 
   if (session) return <ReviewSession lessons={session} onExit={() => setSession(null)} />
 
@@ -69,6 +74,29 @@ export function TrainingPage() {
             <p className="mt-4 rounded-xl border border-wood-700/60 bg-wood-950/50 p-4 text-pearl-dim">
               Nada vencido hoje. Faça uma lição nova na <Link to="/" className="text-enclosure underline">Trilha</Link>: ela entra na fila de revisão.
             </p>
+          )}
+          <h2 className="eyebrow mt-6">Pontos fracos</h2>
+          <p className="mt-2 text-sm text-pearl-dim">O que você errou (ou acertou só com dica) volta hoje; depois em 1, 3 e 7 dias, até sair da lista.</p>
+          {facts.length ? (
+            <>
+              <ul className="mt-3 grid gap-1.5">
+                {facts.slice(0, 8).map((f) => (
+                  <li key={f.key} className="flex items-center justify-between gap-3 rounded-lg border border-wood-700 px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{f.label}</span>
+                      <span className="block truncate text-xs text-pearl-faint">{findLesson(f.lessonId)?.lesson.title}</span>
+                    </span>
+                    <span className="shrink-0 font-mono text-xs text-led-red">{f.misses}× errado</span>
+                  </li>
+                ))}
+              </ul>
+              {facts.length > 8 && <p className="mt-2 text-xs text-pearl-faint">+{facts.length - 8} na lista.</p>}
+              <Button variant="secondary" size="lg" className="mt-3 w-full" onClick={() => setSession(factLessons.slice(0, MAX_REVIEW))}>
+                <RotateCcw className="size-4" aria-hidden /> Treinar pontos fracos
+              </Button>
+            </>
+          ) : (
+            <p className="mt-3 rounded-xl border border-wood-700/60 bg-wood-950/50 p-4 text-pearl-dim">Nenhum ponto fraco vencido. Os erros das lições aparecem aqui.</p>
           )}
         </section>
       </div>
@@ -445,7 +473,7 @@ function ReviewSession({ lessons, onExit }: { lessons: Lesson[]; onExit: () => v
         </span>
       </div>
       <div key={lesson.id} className="xl:min-h-[calc(100dvh-8rem)] xl:flex xl:flex-col xl:justify-center">
-        <ExerciseView spec={lesson.exercise} round={round} onRoundDone={(s) => void onRoundDone(s)} />
+        <ExerciseView spec={lesson.exercise} round={round} onRoundDone={(s) => void onRoundDone(s)} lessonId={lesson.id} />
       </div>
     </div>
   )

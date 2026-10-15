@@ -1,5 +1,5 @@
 import { Mic, MicOff, Volume2 } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { readNoteHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
@@ -26,6 +26,7 @@ export function ReadNote({ spec, onRoundDone, round }: ExerciseProps<ReadNoteSpe
   const [forceTap, setForceTap] = useState(false)
   const prev = useRef(round)
   const midi = midiAt(inst, q.pos)
+  useFact(`read:${inst.kind}:${midi}`, `Ler ${noteName(mod12(midi))} na pauta`)
   const clef = clefFor(inst)
   const written = staffNote(midi, clef)
   const mode = spec.answer === 'play' && forceTap ? 'fretboard' : spec.answer

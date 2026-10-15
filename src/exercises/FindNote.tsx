@@ -1,5 +1,5 @@
 import { Mic, MicOff, SkipForward } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { findNoteHints } from './hints'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
@@ -19,6 +19,7 @@ export function FindNote({ spec, onRoundDone, round }: ExerciseProps<FindNoteSpe
   const leftHanded = useSettings((s) => s.leftHanded)
   const noteName = useNoteName()
   const [q, setQ] = useState<FindNoteRound>(() => findNoteRound(inst, spec.pool, spec.strings, spec.frets))
+  useFact(`find:${q.pc}`, `Achar ${noteName(q.pc)} no braço`)
   const [markers, setMarkers] = useState<Marker[]>([])
   const [locked, setLocked] = useState(false)
   const [forceTap, setForceTap] = useState(false)

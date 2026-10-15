@@ -112,7 +112,7 @@ function LessonRunner({ lesson, worldTitle }: { lesson: Lesson; worldTitle: stri
 
       {phase === 'play' && (
         <div key={attempt} className="xl:min-h-[calc(100dvh-8rem)] xl:flex xl:flex-col xl:justify-center">
-          <ExerciseView spec={ex} {...props} />
+          <ExerciseView spec={ex} {...props} lessonId={lesson.id} />
           <Button variant="ghost" className="mt-6 self-start" onClick={() => setPhase('teach')}>
             <ArrowLeft className="size-4" aria-hidden /> Rever explicação
           </Button>

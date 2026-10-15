@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
+import { recordFact } from '../progress/facts'
 import type { ExerciseSpec } from '../curriculum/types'
-import { HINT_CAP, HintContext } from './Hint'
+import { FactContext, HINT_CAP, HintContext } from './Hint'
 import { FindNote } from './FindNote'
 import { HearChord, HearDegree } from './HearChord'
 import { HearInterval } from './HearInterval'
@@ -15,16 +16,28 @@ import { RhythmDictation } from './RhythmDictation'
 import { TheoryQuiz } from './TheoryQuiz'
 
 /** Escolhe o componente do exercício pelo tipo (usado nas lições e no Treino do Dia). */
-export function ExerciseView({ spec, round, onRoundDone }: { spec: ExerciseSpec; round: number; onRoundDone: (score: number) => void }) {
+export function ExerciseView({ spec, round, onRoundDone, lessonId }: { spec: ExerciseSpec; round: number; onRoundDone: (score: number) => void; lessonId?: string }) {
   // rodada com dica vale no máximo 75%
   const hinted = useRef(-1)
+  // fato perguntado nesta rodada (o exercício informa com useFact)
+  const fact = useRef<{ key: string; label: string } | null>(null)
+  const reportFact = useCallback((key: string, label: string) => {
+    fact.current = { key, label }
+  }, [])
   const props = {
     round,
-    onRoundDone: (score: number) => onRoundDone(hinted.current === round ? Math.min(score, HINT_CAP) : score),
+    onRoundDone: (score: number) => {
+      const final = hinted.current === round ? Math.min(score, HINT_CAP) : score
+      // com dica conta como erro: o fato ainda não está firme
+      if (lessonId && fact.current) void recordFact({ ...fact.current, lessonId }, final >= 0.99)
+      onRoundDone(final)
+    },
   }
   return (
     <HintContext.Provider value={() => (hinted.current = round)}>
-      <Exercise spec={spec} {...props} />
+      <FactContext.Provider value={reportFact}>
+        <Exercise spec={spec} {...props} />
+      </FactContext.Provider>
     </HintContext.Provider>
   )
 }

@@ -1,5 +1,5 @@
 import { Volume2 } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { nameNoteHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playNote, uiSound } from '../audio/engine'
@@ -17,6 +17,7 @@ export function NameNote({ spec, onRoundDone, round }: ExerciseProps<NameNoteSpe
   const leftHanded = useSettings((s) => s.leftHanded)
   const noteName = useNoteName()
   const [q, setQ] = useState<NameNoteRound>(() => nameNoteRound(inst, spec.pool, spec.strings, spec.frets, spec.choices))
+  useFact(`pos:${inst.kind}:${q.pos.string}:${q.pos.fret}`, `${noteName(q.pc)} · ${stringNumber(inst, q.pos.string)}ª corda, ${q.pos.fret === 0 ? 'solta' : `casa ${q.pos.fret}`}`)
   const [answer, setAnswer] = useState<number | null>(null)
   const prevRound = useRef(round)
 

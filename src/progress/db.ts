@@ -59,6 +59,7 @@ export const db = new Dexie('fretlab') as Dexie & {
   songs: EntityTable<Song, 'id'>
   drills: EntityTable<DrillProgress, 'id'>
   assets: EntityTable<Asset, 'id'>
+  facts: EntityTable<import('./facts').FactProgress, 'key'>
 }
 
 db.version(1).stores({
@@ -70,3 +71,5 @@ db.version(1).stores({
 db.version(2).stores({ drills: 'id' })
 // v3: SoundFont do usuário
 db.version(3).stores({ assets: 'id' })
+// v4: revisão por fato errado (nota/casa, intervalo, grau)
+db.version(4).stores({ facts: 'key, due' })

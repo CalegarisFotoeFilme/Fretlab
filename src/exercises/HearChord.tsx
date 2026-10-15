@@ -1,5 +1,5 @@
 import { Ear } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { hearChordHints, hearDegreeHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playChord, uiSound } from '../audio/engine'
@@ -77,6 +77,7 @@ function EarQuestion<T extends string | number>({
 export function HearChord({ spec, onRoundDone, round }: ExerciseProps<HearChordSpec>) {
   const inst = useInstrument()
   const [q, setQ] = useState<HearChordRound>(() => hearChordRound(inst, spec.qualities))
+  useFact(`hear-chord:${q.quality}`, `Ouvir acorde ${CHORDS[q.quality].name.toLowerCase()}`)
   const prev = useRef(round)
   useEffect(() => {
     if (prev.current === round) return
@@ -109,6 +110,7 @@ export function HearDegree({ spec, onRoundDone, round }: ExerciseProps<HearDegre
     setQ((p) => hearDegreeRound(spec.degrees, p))
   }, [round, spec])
   const field = harmonicField(q.key, spec.mode)
+  useFact(`hear-degree:${spec.mode}:${q.degree}`, `Ouvir o grau ${field[q.degree - 1].roman} (tom ${spec.mode === 'major' ? 'maior' : 'menor'})`)
   const play = () => {
     playChord(degreeChordMidis(q.key, spec.mode, 1))
     setTimeout(() => playChord(degreeChordMidis(q.key, spec.mode, q.degree)), 1100)

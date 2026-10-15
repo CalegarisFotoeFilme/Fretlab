@@ -120,7 +120,6 @@
 - Treino do Dia: drills de técnica com `instrument` (`slap`, `walking` no baixo; `legato`, `sweep` na guitarra), `drillsFor(kind)`; o exercício do dia sorteia só entre os do instrumento.
 - Service worker: registrado à mão em `main.tsx` (`injectRegister: false`) e só no navegador; no app para Mac ele é removido (e o cache apagado), então uma build nova aparece já na primeira abertura.
 - Lição `w11-bend-afinado`: bend conferido pelo detector (reusa `play-interval` com ½ e 1 tom, input play).
-- Falta: símbolos de técnica (T/P, x) na notação (RhythmStaff/TabView).
 
 ### C0. Planejamento original (referência)
 
@@ -133,11 +132,14 @@
 2. **Mundo de técnica de guitarra:** palhetada alternada e econômica, palm mute, bends (com afinação-alvo ouvida pelo detector), vibrato, legato (hammer-on/pull-off), slides, sweep picking, tapping, abafamento e "string skipping", acordes com pestana (ligar ao CAGED).
 3. Os mundos devem aparecer conforme o instrumento configurado (filtrar em `WORLDS` por `instrument`), mantendo a trilha toda aberta.
 
-### D. Ideias para depois
+### D. Feito em 15/10 (antes eram "ideias para depois")
 
-1. Treino do Dia: repetição espaçada por fato errado (corda/casa, intervalo, grau), além da revisão por lição.
-2. Leitura em outras posições (casas 5–8, 7–10…) e de trechos curtos.
-3. Modos gregos completos.
+1. **Revisão por fato errado** (`src/progress/facts.ts`, tabela `facts` no Dexie v4): exercícios informam o fato da rodada com `useFact(key, label)` (Hint.tsx); `ExerciseView` grava acerto/erro (com dica = erro). Errou volta hoje; acertos vencidos: 1, 3, 7 dias; depois sai. Painel "Pontos fracos" no Treino abre uma revisão com as lições desses fatos. Entra no backup dos estudos.
+2. **Leitura** na 5ª e na 7ª posição (`w9-quinta-posicao`, `w9-setima-posicao`).
+3. **Modos gregos**: mundo 12 (`world12-modes.ts`), escala `locrian` em `SCALES`.
+4. **Símbolos de técnica** na notação rítmica: `marks` em `RhythmSpec` (um por padrão) e no bloco `rhythm` (T/P, x = ghost note com cabeça em x, i/m, ⊓/V, PM). Teste confere um símbolo por ataque.
+
+Sem pendências abertas; próximas ideias ficam a critério do usuário (ex.: trechos curtos de leitura, ouvir modos).
 
 - **Sessão 14/10 (fim):** sincronia do YouTube salva na música (`Song.sync`; segunda abertura não consulta o Songsterr); cursor suavizado no modo Gravação (interpolação entre leituras do YouTube); tab isolada (`isolate`) para o destaque do compasso não cobrir os painéis; backups separados: estudos (`exportProgress`) e biblioteca (`exportLibrary`, arquivos em base64 + sincronia + volumes); `importBackup` aceita os dois e não duplica músicas; cursor próprio `steadyCursor` (alphatab.ts): a animação de transição do alphaTab some no WebKit e a barra piscava; obs.: `enableAnimatedBeatCursor=false` não funciona no alphaTab 1.8.4 (bug em `_updateCursorHandler`); posição do YouTube nunca recua. No app para Mac o backup vai para Downloads (comando `save_backup`). **Aguardando teste do usuário.**
 

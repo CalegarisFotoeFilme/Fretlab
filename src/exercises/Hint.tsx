@@ -1,5 +1,5 @@
 import { Lightbulb } from 'lucide-react'
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { Button } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 
@@ -13,6 +13,14 @@ export const HINT_CAP = 0.75
 
 /** Avisado pelo ExerciseView: a rodada atual usou dica. */
 export const HintContext = createContext<() => void>(() => {})
+
+/** O exercício informa o fato que está sendo perguntado (para a revisão por fato errado). */
+export const FactContext = createContext<(key: string, label: string) => void>(() => {})
+/** Informa o fato da rodada atual: chave estável e um rótulo curto para a lista do Treino. */
+export function useFact(key: string, label: string) {
+  const report = useContext(FactContext)
+  useEffect(() => report(key, label), [report, key, label])
+}
 
 /** Dicas da rodada. Use `key={round}` no componente para recomeçar a cada rodada. */
 export function Hint({ lines, className = '' }: { lines: string[]; className?: string }) {

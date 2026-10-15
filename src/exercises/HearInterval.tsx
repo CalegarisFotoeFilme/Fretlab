@@ -1,5 +1,5 @@
 import { Ear, Volume2 } from 'lucide-react'
-import { Hint } from './Hint'
+import { Hint, useFact } from './Hint'
 import { hearIntervalHints } from './hints'
 import { useEffect, useRef, useState } from 'react'
 import { playInterval, uiSound } from '../audio/engine'
@@ -15,6 +15,7 @@ import type { ExerciseProps } from './types'
 export function HearInterval({ spec, onRoundDone, round }: ExerciseProps<HearIntervalSpec>) {
   const inst = useInstrument()
   const [q, setQ] = useState<HearIntervalRound>(() => hearIntervalRound(inst, spec.intervals, spec.mode))
+  useFact(`hear-interval:${q.semis}`, `Ouvir a ${INTERVALS[q.semis].name.toLowerCase()}`)
   const [answer, setAnswer] = useState<number | null>(null)
   const prevRound = useRef(round)
 
