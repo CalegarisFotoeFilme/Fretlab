@@ -376,8 +376,11 @@ function TabView({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; per
   const BEAT_GAP = 10
   const PAD = 30
   const height = GAP * (n - 1) + 24
-  const xOf = (i: number) => PAD + i * CELL + Math.floor(i / perBeat) * BEAT_GAP + CELL / 2
-  const width = xOf(perBar - 1) + CELL / 2 + 10
+  // largura fixa (a de um compasso de semicolcheias) para todo exercício ter o mesmo tamanho na tela;
+  // as notas se espalham dentro de cada tempo conforme quantas cabem nele
+  const beatW = 4 * CELL + BEAT_GAP
+  const xOf = (i: number) => PAD + Math.floor(i / perBeat) * beatW + ((i % perBeat) + 0.5) * ((beatW - BEAT_GAP) / perBeat)
+  const width = PAD + 4 * beatW - BEAT_GAP + 10
   const yOf = (string: number) => 12 + GAP * (n - 1 - string) // corda grave embaixo
   return (
     <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))]">
