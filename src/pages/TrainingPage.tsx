@@ -115,6 +115,13 @@ export function TrainingPage() {
 
 /** sorteio fora do componente (regras do React Compiler) */
 const pickRandom = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)]
+/** as quatro combinações do sorteio: o que fica fixo (tema = exercício, tom = grade de tons) */
+const SCOPES = [
+  { label: 'Tema e tom aleatórios', theme: false, key: false },
+  { label: 'Tema fixo, tom aleatório', theme: true, key: false },
+  { label: 'Tema e tom fixos', theme: true, key: true },
+  { label: 'Tema aleatório, tom fixo', theme: false, key: true },
+]
 
 function DrillPanel() {
   const inst = useInstrument()
@@ -160,20 +167,24 @@ function DrillPanel() {
   const [challenge, setChallenge] = useState<Challenge | null>(null)
   /** trecho do desafio em foco (null = o desafio inteiro) */
   const [part, setPart] = useState<number | null>(null)
-  // de onde vem o sorteio: só o tom (tema fixo), só o tema (tom fixo) ou tudo
-  const [scope, setScope] = useState<'tema' | 'tom' | 'tudo'>('tema')
-  const newChallenge = () => {
+  // o que o sorteio mantém: tema (exercício) e/ou tom
+  const [scope, setScope] = useState<{ theme: boolean; key: boolean }>({ theme: true, key: false })
+  const [scopeMenu, setScopeMenu] = useState(false)
+  const newChallenge = (sc = scope) => {
     stop()
     stopPreview()
     setFeedback(null)
+    setScope(sc)
+    setScopeMenu(false)
     const pool = drillsFor(instKind)
     const keyed = pool.filter((d) => d.usesKey)
-    const target = scope === 'tudo' ? pickRandom(pool) : scope === 'tom' ? pickRandom(keyed) : drill
+    // tom fixo só faz sentido em exercícios com tom (a aranha fica de fora)
+    const target = sc.theme ? drill : pickRandom(sc.key ? keyed : pool)
     if (target.id !== drillId) {
       setDrillId(target.id)
       setBpm(null)
     }
-    const c = makeChallenge(inst, target, (pc) => noteName(pc, prefersFlats(pc)), Math.random, target.id === drill.id ? challenge?.kind : undefined, scope === 'tom' ? root : undefined)
+    const c = makeChallenge(inst, target, (pc) => noteName(pc, prefersFlats(pc)), Math.random, target.id === drill.id ? challenge?.kind : undefined, sc.key ? root : undefined)
     setChallenge(c)
     // desafio em trechos (caixas): começa estudando o primeiro
     setPart(c.parts ? 0 : null)
@@ -254,7 +265,7 @@ function DrillPanel() {
     setFeedback(clean ? `Boa! Próxima meta: ${r.bpm} BPM. +${r.xp} XP` : `Tudo bem: a meta continua em ${r.bpm} BPM. Precisão antes de velocidade. +${r.xp} XP`)
   }
 
-  useHotkeys({ ' ': toggle, n: newChallenge, c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
+  useHotkeys({ ' ': toggle, n: () => newChallenge(), c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
 
   // número de ordem de cada posição (a primeira vez em que ela aparece); fundamentais em laranja
   // com um trecho em foco, só ele é numerado (1, 2, 3… na ordem) e o resto aparece apagado;
@@ -299,19 +310,9 @@ function DrillPanel() {
         </div>
         <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={drillsFor(instKind).map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
 
-        <Segmented<'tema' | 'tom' | 'tudo'>
-          label="Sorteio do desafio"
-          value={scope}
-          onChange={setScope}
-          options={[
-            { value: 'tema', label: 'Neste tema' },
-            { value: 'tom', label: `No tom de ${noteName(root, prefersFlats(root))}` },
-            { value: 'tudo', label: 'Tudo aleatório' },
-          ]}
-        />
         {challenge ? (
           <div className="rounded-xl border border-enclosure/50 bg-enclosure/10 p-4">
-            <p className="eyebrow flex items-center gap-2"><Shuffle className="size-4" aria-hidden /> Desafio</p>
+            <p className="eyebrow flex items-center gap-2"><Shuffle className="size-4" aria-hidden /> Desafio · {SCOPES.find((x) => x.theme === scope.theme && x.key === scope.key)?.label}</p>
             <p className="mt-1 text-lg font-semibold leading-snug">{challenge.title}</p>
             <p className="mt-1.5 text-sm text-pearl-dim">{challenge.goal}</p>
             {challenge.parts && (
@@ -328,17 +329,34 @@ function DrillPanel() {
             )}
             <div className="mt-3 flex flex-wrap gap-2">
               <Button onClick={hear}><Volume2 className="size-4" aria-hidden /> {listening ? 'Parar' : focus ? 'Ouvir este trecho' : 'Ouvir o desafio'}</Button>
-              <Button variant="secondary" onClick={newChallenge}><Shuffle className="size-4" aria-hidden /> Novo desafio <Kbd>N</Kbd></Button>
+              <Button variant="secondary" onClick={() => newChallenge()}><Shuffle className="size-4" aria-hidden /> Novo desafio <Kbd>N</Kbd></Button>
+              <Button variant="ghost" onClick={() => setScopeMenu((v) => !v)}>Mudar o sorteio</Button>
               <Button variant="ghost" onClick={() => setChallenge(null)}>Modo livre</Button>
             </div>
           </div>
         ) : (
-          <Button variant="secondary" onClick={newChallenge} className="self-start">
-            <Shuffle className="size-4" aria-hidden /> Desafio aleatório <Kbd>N</Kbd>
+          <Button variant="secondary" onClick={() => setScopeMenu((v) => !v)} className="self-start" aria-expanded={scopeMenu}>
+            <Shuffle className="size-4" aria-hidden /> Desafio aleatório
           </Button>
         )}
+        {scopeMenu && (
+          <div className="grid gap-1.5 rounded-xl border border-wood-700 bg-wood-950/60 p-2" role="menu" aria-label="Tipo de desafio">
+            {SCOPES.map((sc) => {
+              const theme = sc.theme ? drill.title : 'qualquer assunto'
+              const key = sc.key ? `${noteName(root, prefersFlats(root))}` : 'qualquer tom'
+              const active = challenge && scope.theme === sc.theme && scope.key === sc.key
+              return (
+                <button key={sc.label} role="menuitem" onClick={() => newChallenge(sc)} className={`rounded-lg px-3 py-2 text-left hover:bg-wood-800 ${active ? 'bg-wood-800' : ''}`}>
+                  <span className="block font-semibold">{sc.label}</span>
+                  <span className="block text-xs text-pearl-faint">{theme} · {key}</span>
+                </button>
+              )
+            })}
+            <p className="px-3 pb-1 text-xs text-pearl-faint">O tema é o exercício selecionado acima; o tom é o da grade de tons.</p>
+          </div>
+        )}
 
-        {(!challenge || scope === 'tom') && drill.usesKey && (
+        {(!challenge || scope.key) && drill.usesKey && (
           <div>
             <p className="eyebrow mb-1.5">
               Tom {root === keyToday ? <span className="text-enclosure">· tom do dia</span> : <button className="underline normal-case tracking-normal" onClick={() => setRoot(keyToday)}>voltar ao tom do dia ({noteName(keyToday, prefersFlats(keyToday))})</button>}
