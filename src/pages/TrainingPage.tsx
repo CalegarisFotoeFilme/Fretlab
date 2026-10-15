@@ -11,6 +11,7 @@ import { findLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
 import { dueFacts } from '../progress/facts'
+import { IntervalEar } from '../training/IntervalEar'
 import { db } from '../progress/db'
 import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
@@ -46,7 +47,10 @@ export function TrainingPage() {
         Um aquecimento técnico curto com metrônomo, à la <em>Guitar Aerobics</em>, e a revisão das lições que estão vencendo. Dez a quinze minutos por dia rendem mais que uma maratona no fim de semana.
       </PageHeader>
       <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_420px] items-start">
-        <DrillPanel />
+        <div className="grid gap-6">
+          <DrillPanel />
+          <IntervalEar />
+        </div>
         <section className="panel p-5 self-start">
           <h2 className="eyebrow">Revisão espaçada</h2>
           <p className="mt-2 text-sm text-pearl-dim">
