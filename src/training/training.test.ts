@@ -91,3 +91,18 @@ describe('Treino do Dia', () => {
     expect(due).toEqual(['dominada-faz-tempo', 'reprovada', 'fraca-ontem'])
   })
 })
+
+describe('sentido do exercício', () => {
+  it('só sobe termina na nota mais aguda; só desce começa nela', async () => {
+    const { withDirection } = await import('./drills')
+    const inst = instruments[2]
+    const drill = DRILLS.find((d) => d.id === 'pentatonica')!
+    const seq = drillSequence(inst, drill, 9, 0)
+    const top = Math.max(...seq.map((p) => midiAt(inst, p)))
+    const up = withDirection(inst, drill, seq, 'up')
+    const down = withDirection(inst, drill, seq, 'down')
+    expect(midiAt(inst, up.at(-1)!)).toBe(top)
+    expect(midiAt(inst, down[0])).toBe(top)
+    expect(up.length + down.length - 1).toBe(seq.length)
+  })
+})

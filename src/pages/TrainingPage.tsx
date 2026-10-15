@@ -19,7 +19,7 @@ import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
 import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
 import { mod12, prefersFlats } from '../theory/notes'
-import { DRILLS, drillOfDay, drillsFor, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
+import { DRILLS, drillOfDay, drillsFor, withDirection, type Direction, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
 
 /** Rodadas de cada lição na revisão mista (curta, como um "flashcard" da lição). */
 const REVIEW_ROUNDS = 3
@@ -189,7 +189,8 @@ function DrillPanel() {
     // desafio em trechos (caixas): começa estudando o primeiro
     setPart(c.parts ? 0 : null)
   }
-  const seq = challenge?.seq ?? drillSequence(inst, drill, root, position)
+  const [direction, setDirection] = useState<Direction>('both')
+  const seq = challenge?.seq ?? withDirection(inst, drill, drillSequence(inst, drill, root, position), direction)
   const perBeat = challenge?.perBeat ?? drill.perBeat
   const keyPc = challenge?.root ?? root
   const focus = part !== null ? challenge?.parts?.[part] : undefined
@@ -386,6 +387,24 @@ function DrillPanel() {
             ))}
           </div>
         </div>}
+
+        {!challenge && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Segmented<Direction>
+              label="Sentido"
+              value={direction}
+              onChange={setDirection}
+              options={[
+                { value: 'both', label: 'Sobe e desce' },
+                { value: 'up', label: 'Só sobe' },
+                { value: 'down', label: 'Só desce' },
+              ]}
+            />
+            <Button onClick={hear}>
+              <Volume2 className="size-4" aria-hidden /> {listening ? 'Parar' : 'Ouvir exercício'}
+            </Button>
+          </div>
+        )}
 
         <Hint key={`${drill.id}-${position}-${root}`} lines={drill.tips} />
         {saved?.best ? <p className="text-sm text-pearl-dim">Recorde limpo neste exercício: <span className="font-semibold text-pearl">{saved.best} BPM</span></p> : null}

@@ -341,6 +341,25 @@ export function drillSequence(inst: Instrument, drill: Drill, root: number, posi
   return []
 }
 
+export type Direction = 'both' | 'up' | 'down'
+/** exercícios cuja sequência já sobe e desce (escalas, arpejos, aranha, CAGED) */
+const UP_DOWN = new Set(['aranha', 'pentatonica', 'maior', 'arpejos', 'legato', 'sweep', 'caged'])
+
+/**
+ * Sentido do exercício: só subindo, só descendo ou os dois. Nos que já sobem e descem, corta no
+ * ponto mais agudo; nos outros (oitavas, slap, walking), "desce" é a sequência de trás para frente.
+ */
+export function withDirection(inst: Instrument, drill: Drill, seq: FretPos[], dir: Direction): FretPos[] {
+  if (dir === 'both' && UP_DOWN.has(drill.id)) return seq
+  if (!UP_DOWN.has(drill.id)) {
+    const back = [...seq].reverse()
+    return dir === 'up' ? seq : dir === 'down' ? back : [...seq, ...back.slice(1)]
+  }
+  const pitches = seq.map((p) => midiAt(inst, p))
+  const top = pitches.indexOf(Math.max(...pitches))
+  return dir === 'up' ? seq.slice(0, top + 1) : seq.slice(top)
+}
+
 // ---------- Revisão espaçada (lições) ----------
 
 export interface ReviewItem {
