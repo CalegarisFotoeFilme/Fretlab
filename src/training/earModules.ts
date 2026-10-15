@@ -44,12 +44,12 @@ export interface EarQuestion {
 }
 
 /** Sorteia a próxima pergunta, evitando repetir o mesmo intervalo mais de 2 vezes seguidas. */
-export function nextEarQuestion(intervals: number[], mode: EarPlayMode, history: number[], rng: () => number = Math.random): EarQuestion {
+export function nextEarQuestion(intervals: number[], mode: EarPlayMode, history: number[], rng: () => number = Math.random, low = 48): EarQuestion {
   let semis = intervals[Math.floor(rng() * intervals.length)]
   const [a, b] = history.slice(-2)
   if (intervals.length > 1 && a === semis && b === semis) semis = intervals.find((s) => s !== semis)!
-  // tônica sorteada entre as 12 notas (C3 a B3)
-  const root = 48 + Math.floor(rng() * 12)
+  // tônica sorteada entre as 12 notas, a partir de `low` (C3 por padrão; C2 no baixo)
+  const root = low + Math.floor(rng() * 12)
   const harmonic = mode === 'harmonic' || (mode === 'both' && rng() < 0.5)
   return { semis, root, harmonic }
 }

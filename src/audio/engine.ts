@@ -43,8 +43,17 @@ function pluckBuffer(midi: number): AudioBuffer {
   return buf
 }
 
-export function playNote(midi: number, when = 0, gain = 0.6) {
+/** Timbre de instrumento real (SoundFont) para as notas do app; `null` = sintetizador próprio. */
+type NoteVoice = (midi: number, when: number, gain: number) => boolean
+let noteVoice: NoteVoice | null = null
+export function setNoteVoice(v: NoteVoice | null) {
+  noteVoice = v
+}
+
+/** `synth` = sempre o sintetizador próprio, ignorando o timbre do instrumento. */
+export function playNote(midi: number, when = 0, gain = 0.6, synth = false) {
   const c = audioCtx()
+  if (!synth && noteVoice?.(midi, when || c.currentTime, gain)) return
   const src = c.createBufferSource()
   src.buffer = pluckBuffer(midi)
   const g = c.createGain()

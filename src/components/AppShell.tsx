@@ -4,6 +4,9 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { isDesktop, onSongsterrDownload, readDownload } from '../library/desktop'
 import { isSongFile, songFromFile } from '../library/importSong'
 import { db } from '../progress/db'
+import { useSettings } from '../progress/settings'
+import { applyInstrumentVoice, resetVoices } from '../audio/sfVoice'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 /**
  * App para Mac: o que a janela do Songsterr baixar (Guitar Pro/MIDI) entra na biblioteca e abre.
@@ -50,9 +53,21 @@ const NAV = [
   { to: '/ajustes', label: 'Ajustes', icon: SlidersHorizontal },
 ]
 
+/** Notas do app com o timbre do instrumento configurado (SoundFont de melhor qualidade disponível). */
+function useInstrumentVoice() {
+  const family = useSettings((s) => (s.instrument === 'guitar6' ? 'guitar' : 'bass'))
+  const sfStamp = useLiveQuery(() => db.assets.get('soundfont').then((a) => a?.addedAt ?? 0), [])
+  useEffect(() => {
+    if (sfStamp === undefined) return
+    resetVoices()
+    void applyInstrumentVoice(family)
+  }, [family, sfStamp])
+}
+
 export function AppShell() {
   const { pathname } = useLocation()
   useSongsterrImports()
+  useInstrumentVoice()
   const immersive = pathname.startsWith('/licao/')
   return (
     <div className="min-h-dvh md:flex">

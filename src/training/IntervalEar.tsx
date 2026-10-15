@@ -1,6 +1,9 @@
 import { Ear, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { audioCtx, playClick, playNote, uiSound } from '../audio/engine'
+import { GM, type SoundFont } from '../audio/sf2'
+import { loadVoices, playVoice } from '../audio/sfVoice'
+import { useInstrument } from '../progress/settings'
 import { Button, Segmented } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 import { recordFact } from '../progress/facts'
@@ -11,16 +14,23 @@ const LESSON = 'w3-ouvido-1'
 /** teclas das respostas: 1–9, 0, Q e W (até 12 opções no aleatório) */
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'q', 'w']
 
-/** Toca o intervalo dentro de um tempo: juntas, ou uma nota em cada metade do tempo. */
-function playEar(q: EarQuestion, beatSec: number) {
+type EarTimbre = 'bass' | 'guitar' | 'synth'
+const PROGRAM = { bass: GM.fingerBass, guitar: GM.cleanGuitar } as const
+/** região da tônica: o baixo uma oitava abaixo */
+const LOW: Record<EarTimbre, number> = { bass: 36, guitar: 48, synth: 48 }
+
+/** Toca o intervalo dentro de um tempo: juntas, ou tônica e depois o intervalo. */
+function playEar(q: EarQuestion, beatSec: number, timbre: EarTimbre, sf: SoundFont | null) {
   const t = audioCtx().currentTime + 0.02
-  if (q.harmonic) {
-    playNote(q.root, t, 0.45)
-    playNote(q.root + q.semis, t, 0.45)
-  } else {
-    playNote(q.root, t, 0.55)
-    playNote(q.root + q.semis, t + Math.min(0.6, beatSec / 2), 0.55)
+  const second = q.harmonic ? t : t + Math.min(0.6, beatSec / 2)
+  const dur = Math.max(0.5, beatSec * 1.6)
+  const note = (midi: number, when: number, gain: number) => {
+    // timbre do SoundFont; sem ele (ou sem a nota no preset), o sintetizador do app
+    if (timbre !== 'synth' && sf && playVoice(sf, PROGRAM[timbre], midi, when, gain, dur)) return
+    playNote(midi, when, gain, timbre === 'synth')
   }
+  note(q.root, t, q.harmonic ? 0.45 : 0.55)
+  note(q.root + q.semis, second, q.harmonic ? 0.45 : 0.55)
 }
 
 interface Score {
@@ -46,6 +56,12 @@ export function IntervalEar() {
   const [chosen, setChosen] = useState<number | null>(null)
   const [score, setScore] = useState<Score>(EMPTY)
   const [replay, setReplay] = useState(true)
+  const inst = useInstrument()
+  const [timbre, setTimbre] = useState<EarTimbre>(inst.kind === 'guitar6' ? 'guitar' : 'bass')
+  const [sf, setSf] = useState<SoundFont | null>(null)
+  useEffect(() => {
+    if (timbre !== 'synth') void loadVoices().then(setSf)
+  }, [timbre])
   // resposta da rodada, lida pelo relógio do ciclo no tempo 4
   const answer = useRef<number | null>(null)
 
@@ -60,17 +76,17 @@ export function IntervalEar() {
       setBeat(b)
       playClick(audioCtx().currentTime + 0.01, b === 0)
       if (b === 0) {
-        q = nextEarQuestion(mod.intervals, mode, history)
+        q = nextEarQuestion(mod.intervals, mode, history, Math.random, LOW[timbre])
         history.push(q.semis)
         answer.current = null
         setChosen(null)
         setQuestion(q)
-        playEar(q, beatMs / 1000)
+        playEar(q, beatMs / 1000, timbre, sf)
       }
       if (b === 3 && q) {
         const ok = answer.current === q.semis
         uiSound(ok ? 'ok' : 'miss')
-        if (replay) setTimeout(() => q && playEar(q, beatMs / 1000), 150)
+        if (replay) setTimeout(() => q && playEar(q, beatMs / 1000, timbre, sf), 150)
         setScore((s) => {
           const streak = ok ? s.streak + 1 : 0
           return { ok: s.ok + (ok ? 1 : 0), miss: s.miss + (ok ? 0 : 1), streak, best: Math.max(s.best, streak) }
@@ -85,7 +101,7 @@ export function IntervalEar() {
       clearInterval(id)
       setBeat(-1)
     }
-  }, [running, bpm, mod, mode, replay])
+  }, [running, bpm, mod, mode, replay, timbre, sf])
 
   const choose = (semis: number) => {
     // vale responder do tempo 1 ao 3; no 4 a resposta já foi conferida
@@ -126,6 +142,17 @@ export function IntervalEar() {
             { value: 'both', label: 'Alternar' },
           ]}
         />
+        <Segmented<EarTimbre>
+          label="Timbre"
+          value={timbre}
+          onChange={setTimbre}
+          options={[
+            { value: 'bass', label: 'Baixo' },
+            { value: 'guitar', label: 'Guitarra' },
+            { value: 'synth', label: 'Sintetizador' },
+          ]}
+        />
+        {timbre !== 'synth' && !sf && <p className="text-xs text-pearl-faint">Carregando o SoundFont…</p>}
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" onClick={() => setBpm((v) => Math.max(30, v - 5))} aria-label="Mais devagar">−</Button>
           <span className="font-mono text-2xl font-bold w-12 text-center">{bpm}</span>
