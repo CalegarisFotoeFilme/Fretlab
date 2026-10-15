@@ -8,6 +8,8 @@ import { ALL_EAR, EAR_BEATS, EAR_MODULES, nextEarQuestion, type EarPlayMode, typ
 
 const MODULES = [...EAR_MODULES, ALL_EAR]
 const LESSON = 'w3-ouvido-1'
+/** teclas das respostas: 1–9, 0, Q e W (até 12 opções no aleatório) */
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'q', 'w']
 
 /** Toca o intervalo dentro de um tempo: juntas, ou uma nota em cada metade do tempo. */
 function playEar(q: EarQuestion, beatSec: number) {
@@ -96,7 +98,7 @@ export function IntervalEar() {
     if (!running) setScore(EMPTY)
   }
   useHotkeys({
-    ...Object.fromEntries(mod.intervals.map((s, i) => [String(i + 1), () => choose(s)])),
+    ...Object.fromEntries(mod.intervals.map((s, i) => [KEYS[i], () => choose(s)])),
     Enter: toggle,
   })
 
@@ -113,7 +115,7 @@ export function IntervalEar() {
           <h2 className="mt-1 font-display text-3xl font-black uppercase">{mod.title}</h2>
           <p className="mt-1 text-sm text-pearl-dim">{mod.tip}</p>
         </div>
-        <Segmented<string> label="Módulo" value={moduleId} onChange={(v) => { setModuleId(v); setRunning(false) }} options={MODULES.map((m, i) => ({ value: m.id, label: m.id === 'todos' ? 'Todos' : `${i + 1}` }))} />
+        <Segmented<string> label="Módulo" value={moduleId} onChange={(v) => { setModuleId(v); setRunning(false) }} options={MODULES.map((m, i) => ({ value: m.id, label: m.id === 'todos' ? 'Aleatório' : `${i + 1}` }))} />
         <Segmented<EarPlayMode>
           label="Como tocar"
           value={mode}
@@ -134,7 +136,7 @@ export function IntervalEar() {
           </label>
         </div>
         <p className="text-sm text-pearl-faint">
-          Ciclo de 4 tempos: <strong>1</strong> ouça, <strong>2</strong> pausa, <strong>3</strong> responda (teclas <Kbd>1</Kbd> <Kbd>2</Kbd>), <strong>4</strong> confira. Errou? O jogo segue. Comece devagar e suba o andamento quando acertar quase tudo.
+          A tônica muda a cada rodada entre as 12 notas. Separadas: tônica e depois o intervalo; juntas: as duas como um acorde. Ciclo de 4 tempos: <strong>1</strong> ouça, <strong>2</strong> pausa, <strong>3</strong> responda (teclas <Kbd>1</Kbd> <Kbd>2</Kbd>…), <strong>4</strong> confira. Errou? O jogo segue. Comece devagar e suba o andamento quando acertar quase tudo.
         </p>
       </div>
 
@@ -161,7 +163,7 @@ export function IntervalEar() {
                 className={`justify-start ${right ? 'ring-2 ring-led-green' : wrong ? 'ring-2 ring-led-red' : picked ? 'ring-2 ring-enclosure' : ''}`}
                 onClick={() => choose(s)}
               >
-                {mod.intervals.length <= 9 && <Kbd>{i + 1}</Kbd>}
+                <Kbd>{KEYS[i].toUpperCase()}</Kbd>
                 <span className="font-display text-xl font-black">{mod.labels[i]}</span>
               </Button>
             )

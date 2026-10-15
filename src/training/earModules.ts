@@ -27,12 +27,12 @@ export const EAR_MODULES: EarModule[] = [
 /** Todos os intervalos de todos os módulos, para a revisão geral. */
 export const ALL_EAR: EarModule = {
   id: 'todos',
-  title: 'Todos os intervalos',
+  title: 'Aleatório total',
   intervals: EAR_MODULES.flatMap((m) => m.intervals).sort((a, b) => a - b),
   labels: EAR_MODULES.flatMap((m) => m.intervals.map((s, i) => [s, m.labels[i]] as const))
     .sort((a, b) => a[0] - b[0])
     .map(([, l]) => l),
-  tip: 'Revisão geral: os 12 intervalos misturados. Pense primeiro "pequeno, médio ou grande", depois na cor.',
+  tip: 'Qualquer um dos 12 intervalos, de qualquer tônica. Pense primeiro "pequeno, médio ou grande", depois na cor. Boa sorte!',
 }
 
 export type EarPlayMode = 'harmonic' | 'melodic' | 'both'
@@ -48,8 +48,8 @@ export function nextEarQuestion(intervals: number[], mode: EarPlayMode, history:
   let semis = intervals[Math.floor(rng() * intervals.length)]
   const [a, b] = history.slice(-2)
   if (intervals.length > 1 && a === semis && b === semis) semis = intervals.find((s) => s !== semis)!
-  // fundamental numa região média (C3 a A3), boa no timbre do app
-  const root = 48 + Math.floor(rng() * 10)
+  // tônica sorteada entre as 12 notas (C3 a B3)
+  const root = 48 + Math.floor(rng() * 12)
   const harmonic = mode === 'harmonic' || (mode === 'both' && rng() < 0.5)
   return { semis, root, harmonic }
 }

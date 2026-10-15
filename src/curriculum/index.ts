@@ -12,6 +12,7 @@ import { world9 } from './world9-reading'
 import { world10 } from './world10-bass-technique'
 import { world11 } from './world11-guitar-technique'
 import { world12 } from './world12-modes'
+import { world13 } from './world13-harmony'
 
 export const WORLDS: World[] = [
   world1,
@@ -21,6 +22,7 @@ export const WORLDS: World[] = [
   world5,
   world6,
   world7,
+  world13,
   world8,
   world9,
   world12,
