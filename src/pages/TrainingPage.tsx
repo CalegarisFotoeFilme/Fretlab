@@ -250,7 +250,8 @@ function DrillPanel() {
     // um compasso de contagem e depois a sequência, com o clique junto
     const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
     const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
-    const timers = playSeq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p)), lead + i * gap * 1000))
+    // como num instrumento: cada nota corta a anterior; a última decai sozinha
+    const timers = playSeq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p), 0, 0.6, false, i < playSeq.length - 1 ? gap : undefined), lead + i * gap * 1000))
     timers.push(window.setTimeout(() => stopPreview(), lead + beats * spb * 1000 + 200))
     preview.current = { timers, metro: m }
     setListening(true)

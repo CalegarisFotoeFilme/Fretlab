@@ -9,7 +9,7 @@ import { Button } from '../components/ui'
 import type { RhythmSpec } from '../curriculum/types'
 import { useInstrument, useSettings } from '../progress/settings'
 import { parsePattern } from './generate'
-import { onsetBeats, scoreRhythm, totalBeats, type RhythmEvent, type RhythmScore } from './rhythmScore'
+import { onsetBeats, scoreRhythm, totalBeats, type RhythmEvent, type RhythmScore, eventBeats } from './rhythmScore'
 import type { ExerciseProps } from './types'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
 
@@ -20,7 +20,12 @@ export function previewPattern(events: RhythmEvent[], bpm: number, midi: number)
   const spb = 60 / bpm
   const beats = totalBeats(events)
   const m = startMetronome(bpm, 4, undefined, { totalBeats: beats })
-  onsetBeats(events).forEach((b) => playNote(midi, m.startTime + b * spb, 0.7))
+  // cada nota dura a sua figura (a pausa cala); a última decai sozinha
+  let t = 0
+  events.forEach((e, i) => {
+    if (!e.rest) playNote(midi, m.startTime + t * spb, 0.7, false, i < events.length - 1 ? eventBeats(e) * spb : undefined)
+    t += eventBeats(e)
+  })
   setTimeout(() => m.stop(), (beats * spb + 0.5) * 1000)
 }
 

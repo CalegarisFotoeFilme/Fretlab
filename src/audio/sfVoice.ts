@@ -48,7 +48,7 @@ function sampleBuffer(sf: SoundFont, index: number) {
  * Toca uma nota com o timbre do programa GM. Devolve `false` se o SoundFont não estiver pronto
  * (quem chama pode cair no sintetizador).
  */
-export function playVoice(sf: SoundFont, program: number, midi: number, when: number, gain = 0.6, duration = 1.6) {
+export function playVoice(sf: SoundFont, program: number, midi: number, when: number, gain = 0.6, duration = 1.6, cut = false) {
   const zones = zonesFor(sf, program, midi)
   if (!zones.length) return false
   const c = audioCtx()
@@ -67,11 +67,13 @@ export function playVoice(sf: SoundFont, program: number, midi: number, when: nu
     const level = (gain * 10 ** (-z.attenuation / 20)) / Math.sqrt(zones.length)
     g.gain.setValueAtTime(level, when)
     // solta a nota no fim, com um decaimento curto (sem estalo)
+    // abafada (a próxima nota corta): solta rápido; senão, decaimento suave
+    const release = cut ? 0.04 : 0.3
     g.gain.setValueAtTime(level, when + duration)
-    g.gain.exponentialRampToValueAtTime(0.0001, when + duration + 0.3)
+    g.gain.exponentialRampToValueAtTime(0.0001, when + duration + release)
     src.connect(g).connect(c.destination)
     src.start(when, offset)
-    src.stop(when + duration + 0.35)
+    src.stop(when + duration + release + 0.05)
     trackNote(src, g)
   }
   return true
@@ -84,5 +86,5 @@ export function playVoice(sf: SoundFont, program: number, midi: number, when: nu
 export async function applyInstrumentVoice(kind: 'bass' | 'guitar') {
   const sf = await loadVoices()
   const program = kind === 'bass' ? GM.fingerBass : GM.cleanGuitar
-  setNoteVoice(sf ? (midi, when, gain) => playVoice(sf, program, midi, when, gain) : null)
+  setNoteVoice(sf ? (midi, when, gain, dur) => playVoice(sf, program, midi, when, gain, dur ?? 1.6, dur !== undefined) : null)
 }

@@ -44,7 +44,7 @@ function pluckBuffer(midi: number): AudioBuffer {
 }
 
 /** Timbre de instrumento real (SoundFont) para as notas do app; `null` = sintetizador próprio. */
-type NoteVoice = (midi: number, when: number, gain: number) => boolean
+type NoteVoice = (midi: number, when: number, gain: number, dur?: number) => boolean
 let noteVoice: NoteVoice | null = null
 export function setNoteVoice(v: NoteVoice | null) {
   noteVoice = v
@@ -74,10 +74,15 @@ export function silenceNotes() {
   sounding.clear()
 }
 
-/** `synth` = sempre o sintetizador próprio, ignorando o timbre do instrumento. */
-export function playNote(midi: number, when = 0, gain = 0.6, synth = false) {
+/**
+ * `synth` = sempre o sintetizador próprio, ignorando o timbre do instrumento.
+ * `dur` = abafa a nota depois desse tempo (s), como a próxima nota cortando a anterior num
+ * instrumento; sem ele, a nota decai sozinha.
+ */
+export function playNote(midi: number, when = 0, gain = 0.6, synth = false, dur?: number) {
   const c = audioCtx()
-  if (!synth && noteVoice?.(midi, when || c.currentTime, gain)) return
+  const at = when || c.currentTime
+  if (!synth && noteVoice?.(midi, at, gain, dur)) return
   const src = c.createBufferSource()
   src.buffer = pluckBuffer(midi)
   const g = c.createGain()
@@ -87,13 +92,19 @@ export function playNote(midi: number, when = 0, gain = 0.6, synth = false) {
   lp.type = 'lowpass'
   lp.frequency.value = Math.min(6000, midiToFreq(midi) * 10)
   src.connect(lp).connect(g).connect(c.destination)
-  src.start(when || c.currentTime)
+  src.start(at)
+  if (dur !== undefined) {
+    g.gain.setValueAtTime(gain, at + dur)
+    g.gain.setTargetAtTime(0, at + dur, 0.015)
+    src.stop(at + dur + 0.12)
+  }
   trackNote(src, g)
 }
 
 export function playSequence(midis: number[], gapSec = 0.35) {
   const c = audioCtx()
-  midis.forEach((m, i) => playNote(m, c.currentTime + 0.05 + i * gapSec))
+  // uma nota corta a anterior (como numa corda só); a última decai sozinha
+  midis.forEach((m, i) => playNote(m, c.currentTime + 0.05 + i * gapSec, 0.6, false, i < midis.length - 1 ? gapSec : undefined))
 }
 
 /** Toca um intervalo: melódico (uma nota depois da outra) ou harmônico (as duas juntas). */

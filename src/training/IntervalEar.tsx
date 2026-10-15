@@ -24,12 +24,13 @@ function playEar(q: EarQuestion, beatSec: number, timbre: EarTimbre, sf: SoundFo
   const t = audioCtx().currentTime + 0.02
   const second = q.harmonic ? t : t + Math.min(0.6, beatSec / 2)
   const dur = Math.max(0.5, beatSec * 1.6)
-  const note = (midi: number, when: number, gain: number) => {
+  // `cut` = a nota seguinte corta esta (como numa corda só); sem ele, decai suave
+  const note = (midi: number, when: number, gain: number, cut?: number) => {
     // timbre do SoundFont; sem ele (ou sem a nota no preset), o sintetizador do app
-    if (timbre !== 'synth' && sf && playVoice(sf, PROGRAM[timbre], midi, when, gain, dur)) return
-    playNote(midi, when, gain, timbre === 'synth')
+    if (timbre !== 'synth' && sf && playVoice(sf, PROGRAM[timbre], midi, when, gain, cut ?? dur, cut !== undefined)) return
+    playNote(midi, when, gain, timbre === 'synth', cut)
   }
-  note(q.root, t, q.harmonic ? 0.45 : 0.55)
+  note(q.root, t, q.harmonic ? 0.45 : 0.55, q.harmonic ? undefined : second - t)
   note(q.root + q.semis, second, q.harmonic ? 0.45 : 0.55)
 }
 

@@ -76,10 +76,13 @@ export function EchoTrainer() {
     const t0 = audioCtx().currentTime + 0.1
     for (let b = 0; b < 4; b++) playClick(t0 + b * spb, b === 0)
     const start = t0 + 4 * spb
-    onsetBeats(parsePattern(p.pattern)).forEach((beat, i) => {
+    const onsets = onsetBeats(parsePattern(p.pattern))
+    onsets.forEach((beat, i) => {
       const d = p.degrees[i]
+      // como num instrumento: o próximo ataque corta a nota; a última decai sozinha
+      const next = onsets[i + 1]
       if (d === null) playClick(start + beat * spb, false)
-      else playNote(root + d, start + beat * spb, 0.6)
+      else playNote(root + d, start + beat * spb, 0.6, false, next === undefined ? undefined : (next - beat) * spb)
     })
     const endMs = (start - audioCtx().currentTime + phraseBeats(p) * spb) * 1000
     timers.current.push(window.setTimeout(() => setPhase('listening'), endMs))
