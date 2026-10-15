@@ -194,16 +194,16 @@ export const keyOfDay = (d = new Date()) => KEYS_CYCLE[Math.floor(dayNumber(d) /
 export const positionOfDay = (drill: Drill, d = new Date()) => Math.floor(dayNumber(d) / DRILLS.length) % drill.positions
 
 /** Casa da nota na corda, a partir de `min` (para sobrar espaço para a posição). */
-function fretOn(inst: Instrument, string: number, pc: number, min: number) {
+export function fretOn(inst: Instrument, string: number, pc: number, min: number) {
   const f = mod12(pc - inst.openMidi[string])
   return f < min ? f + 12 : f
 }
 
 /** Sobe e depois desce, sem repetir o topo. */
-const upAndDown = (up: FretPos[]) => [...up, ...up.slice(0, -1).reverse()]
+export const upAndDown = (up: FretPos[]) => [...up, ...up.slice(0, -1).reverse()]
 
 /** Desce uma oitava se a posição passar do fim do braço (e couber). */
-function fitNeck(inst: Instrument, ps: FretPos[]) {
+export function fitNeck(inst: Instrument, ps: FretPos[]) {
   const max = Math.max(...ps.map((p) => p.fret))
   if (max <= inst.frets) return ps
   const lowered = ps.map((p) => ({ ...p, fret: p.fret - 12 }))
@@ -215,7 +215,7 @@ function fitNeck(inst: Instrument, ps: FretPos[]) {
  * recebe as próximas `perString` notas da escala, subindo. Com 2 por corda na pentatônica saem as 5
  * caixas; com 3 por corda na maior, as 7 posições.
  */
-function scaleByString(inst: Instrument, root: number, steps: readonly number[], perString: number, start: number): FretPos[] {
+export function scaleByString(inst: Instrument, root: number, steps: readonly number[], perString: number, start: number): FretPos[] {
   const r = inst.openMidi[0] + fretOn(inst, 0, root, 1)
   const pitches: number[] = []
   for (let oct = 0; pitches.length < start + perString * inst.openMidi.length; oct++) for (const s of steps) pitches.push(r + 12 * oct + s)
@@ -228,7 +228,7 @@ function scaleByString(inst: Instrument, root: number, steps: readonly number[],
 }
 
 /** Arpejo (tríade) na forma cuja fundamental está em `string`: notas do acorde nas 4 casas da forma. */
-function arpeggio(inst: Instrument, root: number, string: number, third: 3 | 4, extra: number[] = []): FretPos[] {
+export function arpeggio(inst: Instrument, root: number, string: number, third: 3 | 4, extra: number[] = []): FretPos[] {
   const s = Math.min(string, inst.openMidi.length - 1)
   const f = fretOn(inst, s, root, 1)
   const pcs = [root, mod12(root + third), mod12(root + 7), ...extra.map((e) => mod12(root + e))]

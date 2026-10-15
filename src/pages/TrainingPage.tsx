@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Hint } from '../exercises/Hint'
-import { Check, ChevronDown, ChevronUp, Dumbbell, Play, RotateCcw, Square, Volume2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Dumbbell, Play, RotateCcw, Shuffle, Square, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { audioCtx, playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
@@ -11,7 +11,9 @@ import { findLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
 import { dueFacts } from '../progress/facts'
+import { makeChallenge, type Challenge } from '../training/challenges'
 import { IntervalEar } from '../training/IntervalEar'
+import { EchoTrainer } from '../training/EchoTrainer'
 import { db } from '../progress/db'
 import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
@@ -50,6 +52,7 @@ export function TrainingPage() {
         <div className="grid gap-6">
           <DrillPanel />
           <IntervalEar />
+          <EchoTrainer />
         </div>
         <section className="panel p-5 self-start">
           <h2 className="eyebrow">Revisão espaçada</h2>
@@ -150,7 +153,17 @@ function DrillPanel() {
   const [listening, setListening] = useState(false)
   const preview = useRef<{ timers: number[]; metro: MetronomeHandle | null }>({ timers: [], metro: null })
 
-  const seq = drillSequence(inst, drill, root, position)
+  // desafio sorteado sobre o tema (null = modo livre: tom e posição escolhidos à mão)
+  const [challenge, setChallenge] = useState<Challenge | null>(null)
+  const newChallenge = () => {
+    stop()
+    stopPreview()
+    setFeedback(null)
+    setChallenge(makeChallenge(inst, drill, (pc) => noteName(pc, prefersFlats(pc)), Math.random, challenge?.kind))
+  }
+  const seq = challenge?.seq ?? drillSequence(inst, drill, root, position)
+  const perBeat = challenge?.perBeat ?? drill.perBeat
+  const keyPc = challenge?.root ?? root
   const stopPreview = () => {
     preview.current.timers.forEach((t) => clearTimeout(t))
     preview.current.metro?.stop()
@@ -194,13 +207,14 @@ function DrillPanel() {
     setPosition(positionOfDay(DRILLS.find((d) => d.id === id)!))
     setBpm(null)
     setFeedback(null)
+    setChallenge(null)
   }
   const hear = () => {
     if (listening) return stopPreview()
     stop()
     const spb = 60 / target
-    const gap = spb / drill.perBeat
-    const beats = Math.ceil(seq.length / drill.perBeat)
+    const gap = spb / perBeat
+    const beats = Math.ceil(seq.length / perBeat)
     // um compasso de contagem e depois a sequência, com o clique junto
     const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
     const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
@@ -220,7 +234,7 @@ function DrillPanel() {
     setFeedback(clean ? `Boa! Próxima meta: ${r.bpm} BPM. +${r.xp} XP` : `Tudo bem: a meta continua em ${r.bpm} BPM. Precisão antes de velocidade. +${r.xp} XP`)
   }
 
-  useHotkeys({ ' ': toggle, c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
+  useHotkeys({ ' ': toggle, n: newChallenge, c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
 
   // número de ordem de cada posição (a primeira vez em que ela aparece); fundamentais em laranja
   const order = new Map<string, number>()
@@ -230,13 +244,16 @@ function DrillPanel() {
   })
   const markers: Marker[] = [...order.entries()].map(([k, i]) => {
     const [string, fret] = k.split(':').map(Number)
-    const isRoot = drill.usesKey && mod12(midiAt(inst, { string, fret }) - root) === 0
+    const isRoot = drill.usesKey && mod12(midiAt(inst, { string, fret }) - keyPc) === 0
     return { string, fret, tone: isRoot ? 'root' : 'neutral', label: String(i) }
   })
   const frets = seq.map((p) => p.fret)
   // braço sempre com 12 casas (mesmo tamanho em todo exercício); só desliza se a posição passar da casa 12
-  const neckFrom = Math.min(Math.max(0, Math.max(...frets) - 12), inst.frets - 12)
-  const flats = prefersFlats(root)
+  // (desafios que atravessam o braço, como as 5 caixas, mostram o trecho inteiro)
+  const span = Math.max(...frets) - Math.min(...frets)
+  const neckFrom = span > 12 ? Math.max(0, Math.min(...frets) - 1) : Math.min(Math.max(0, Math.max(...frets) - 12), inst.frets - 12)
+  const neckTo = span > 12 ? Math.min(inst.frets, Math.max(...frets) + 1) : neckFrom + 12
+  const flats = prefersFlats(keyPc)
   const lesson = drill.lesson ? findLesson(drill.lesson) : null
 
   return (
@@ -252,7 +269,23 @@ function DrillPanel() {
         </div>
         <Segmented<string> label="Exercício" value={drillId} onChange={pickDrill} options={drillsFor(instKind).map((d) => ({ value: d.id, label: d.title.split(' ')[0] }))} />
 
-        {drill.usesKey && (
+        {challenge ? (
+          <div className="rounded-xl border border-enclosure/50 bg-enclosure/10 p-4">
+            <p className="eyebrow flex items-center gap-2"><Shuffle className="size-4" aria-hidden /> Desafio</p>
+            <p className="mt-1 text-lg font-semibold leading-snug">{challenge.title}</p>
+            <p className="mt-1.5 text-sm text-pearl-dim">{challenge.goal}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={newChallenge}><Shuffle className="size-4" aria-hidden /> Novo desafio <Kbd>N</Kbd></Button>
+              <Button variant="ghost" onClick={() => setChallenge(null)}>Modo livre</Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="secondary" onClick={newChallenge} className="self-start">
+            <Shuffle className="size-4" aria-hidden /> Desafio aleatório <Kbd>N</Kbd>
+          </Button>
+        )}
+
+        {!challenge && drill.usesKey && (
           <div>
             <p className="eyebrow mb-1.5">
               Tom {root === keyToday ? <span className="text-enclosure">· tom do dia</span> : <button className="underline normal-case tracking-normal" onClick={() => setRoot(keyToday)}>voltar ao tom do dia ({noteName(keyToday, prefersFlats(keyToday))})</button>}
@@ -272,7 +305,7 @@ function DrillPanel() {
             </div>
           </div>
         )}
-        <div>
+        {!challenge && <div>
           <p className="eyebrow mb-1.5">Posição: <span className="normal-case tracking-normal text-pearl-dim">{drill.positionLabel(position)}</span></p>
           <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Posição">
             {Array.from({ length: drill.positions }, (_, i) => (
@@ -281,7 +314,7 @@ function DrillPanel() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
         <Hint key={`${drill.id}-${position}-${root}`} lines={drill.tips} />
         {saved?.best ? <p className="text-sm text-pearl-dim">Recorde limpo neste exercício: <span className="font-semibold text-pearl">{saved.best} BPM</span></p> : null}
@@ -305,12 +338,12 @@ function DrillPanel() {
           </div>
         </div>
         <div className="-mx-2 overflow-x-auto px-2 w-full max-w-3xl mx-auto">
-          <Fretboard inst={inst} from={neckFrom} to={neckFrom + 12} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
+          <Fretboard inst={inst} from={neckFrom} to={neckTo} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
         </div>
         <p className="text-xs text-pearl-faint">
-          Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(root, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
+          Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(keyPc, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
         </p>
-        <TabView inst={inst} seq={seq} perBeat={drill.perBeat} />
+        <TabView inst={inst} seq={seq} perBeat={perBeat} />
       </div>
 
       {/* controles flutuantes, como no player de tabs: sempre à mão, sem ocupar a tela */}
@@ -331,9 +364,9 @@ function DrillPanel() {
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => changeBpm(target - 2)} className="grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Diminuir andamento">−</button>
-            <span className="font-display text-3xl font-black w-16 text-center leading-none" aria-live="polite" title={`${target} BPM, ${drill.perBeat} notas por clique`}>{target}</span>
+            <span className="font-display text-3xl font-black w-16 text-center leading-none" aria-live="polite" title={`${target} BPM, ${perBeat} notas por clique`}>{target}</span>
             <button onClick={() => changeBpm(target + 2)} className="grid place-items-center size-9 rounded-lg text-pearl-dim hover:text-pearl hover:bg-wood-800" aria-label="Aumentar andamento">+</button>
-            <span className="hidden sm:inline text-[11px] text-pearl-faint leading-tight">BPM<br />{drill.perBeat}/clique</span>
+            <span className="hidden sm:inline text-[11px] text-pearl-faint leading-tight">BPM<br />{perBeat}/clique</span>
           </div>
           {!compact && (
             <>
