@@ -2,7 +2,7 @@
 
 > **Para o Claude que abrir este projeto:** leia este arquivo inteiro e depois execute a seção **"Primeiros passos"**, na ordem, sem esperar instrução. Responda ao usuário em **PT-BR**. Ao terminar uma etapa importante, atualize este arquivo (seções "Estado atual" e "Próximos passos").
 
-Última atualização: 2026-10-14. Origem: sessão na nuvem (Claude Code web), migrada para uma sessão local no Mac do usuário.
+Última atualização: 2026-10-15 (versão 1.0.0). Origem: sessão na nuvem (Claude Code web), migrada para uma sessão local no Mac do usuário.
 
 ## Quem é o usuário e o que ele quer
 
@@ -18,12 +18,20 @@
 ## Primeiros passos (faça automaticamente)
 
 1. `git status` e `git log --oneline -5`: confirme que está no `main` e atualizado (`git pull`).
-2. `npm install`, depois `npx tsc -b && npx eslint . && npx vitest run`. Tudo deve passar: 29 testes, 1 pulado.
-3. Suba o servidor de desenvolvimento (`npm run dev`, em background) e peça ao usuário para abrir **http://localhost:5173** no Chrome.
-4. **Confirme que a tela branca do macOS foi resolvida.** O erro era `The requested module '/src/exercises/Rhythm.ts' does not provide an export named 'previewPattern'`. Causa: `rhythm.ts` e `Rhythm.tsx` colidiam no sistema de arquivos sem distinção de maiúsculas. Foi corrigido renomeando para `src/exercises/rhythmScore.ts`. Se ainda aparecer, procure outra colisão (`src/filenames.test.ts`) ou cache do Vite (`rm -rf node_modules/.vite`).
-5. Guie o teste da **pedaleira**: Ajustes → Entrada de áudio → Atualizar → escolher a pedaleira → Afinador → Ligar entrada → tocar uma corda solta. A detecção nunca foi testada com áudio real (só com senoides nos testes). Ajuste a sensibilidade e o buffer se necessário (`src/audio/pitch.ts`, `src/audio/engine.ts`).
-6. Peça para o usuário importar o MIDI do Songsterr (Master of Puppets) em **Músicas** e confirme que **o som toca** no player. Até agora, o player só foi verificado como "pronto" num navegador headless.
-7. Depois disso, siga os **Próximos passos**.
+2. `npm install`, depois `npx tsc -b && npx eslint . && npx vitest run`. Tudo deve passar (78 testes, 1 pulado).
+3. Leia **"Versão 1.0.0"** logo abaixo e a seção **"Próximos passos"**; pergunte ao usuário o que ele quer agora.
+4. App para Mac: `npm run desktop` (desenvolvimento) ou `npm run desktop:build` (gera `src-tauri/target/release/bundle/macos/FretLab.app`). Depois de instalar uma build, feche e abra o app.
+5. Economize recursos: o usuário prefere testar ele mesmo no app. Faça as checagens automáticas, recompile, faça commit e **peça para ele testar**, com um roteiro curto.
+
+## Versão 1.0.0 (2026-10-15)
+
+Primeira versão "fechada" (package.json, `src-tauri/tauri.conf.json` e `Cargo.toml` em 1.0.0, tag `v1.0.0`). Resumo do que existe:
+- **Trilha:** 13 mundos (O Braço, Ritmo I, Intervalos, Escalas, Acordes e arpejos, CAGED, Campo harmônico, **Harmonia**, Ritmo II, Leitura, **Modos gregos**, **Técnica de baixo** só no baixo, **Técnica de guitarra** só na guitarra), tudo desbloqueado, mundos recolhíveis.
+- **Treino do Dia:** aquecimentos (aranha, pentatônica, escala, arpejos, oitavas, CAGED, slap/walking no baixo, legato/sweep na guitarra) com sentido (sobe/desce), "Ouvir exercício", **desafios aleatórios** (4 combinações de tema e tom; caixas estudadas uma por vez), **treino de intervalos de ouvido** (6 módulos de 2 intervalos + aleatório, ciclo de 4 tempos), **Ouvir e repetir** (frases por nível e grooves aplicados, conferidos pelo microfone), revisão espaçada por lição e **pontos fracos** (por fato errado).
+- **Músicas:** player alphaTab (GP/MIDI), áudio original do YouTube sincronizado pelo Songsterr (sincronia salva na música), volumes por faixa, modos de prática, teoria da música; backups separados de estudos e de biblioteca.
+- **Som:** timbres de baixo e guitarra do SoundFont (o do usuário, ex. GeneralUser GS, ou o padrão), notas cortando a anterior como num instrumento.
+- **App para Mac (Tauri):** janela do Songsterr ao lado, downloads entram sozinhos na biblioteca, login Google, sem service worker.
+- **Versão web no claude.ai** (sem microfone): ver "Estado atual".
 
 ## Estado atual
 
@@ -86,7 +94,7 @@
 
 ## Próximos passos (prioridade)
 
-> **Retome por aqui.** Última sessão: 2026-10-14. Veja o último commit com `git log -1`. O app para Mac foi recompilado nesse commit (`src-tauri/target/release/bundle/macos/FretLab.app`). Tudo está commitado e publicado; as checagens passam (52 testes).
+> **Retome por aqui.** Última sessão: 2026-10-15, versão **1.0.0** (tag `v1.0.0`). Tudo commitado; app para Mac recompilado; checagens passando (78 testes). Não há pendências abertas: as próximas ideias estão em "E" abaixo.
 
 ### A. Pedidos do usuário: todos feitos
 
@@ -150,6 +158,12 @@
 Sem pendências abertas; próximas ideias ficam a critério do usuário (ex.: trechos curtos de leitura, ouvir modos).
 
 - **Sessão 14/10 (fim):** sincronia do YouTube salva na música (`Song.sync`; segunda abertura não consulta o Songsterr); cursor suavizado no modo Gravação (interpolação entre leituras do YouTube); tab isolada (`isolate`) para o destaque do compasso não cobrir os painéis; backups separados: estudos (`exportProgress`) e biblioteca (`exportLibrary`, arquivos em base64 + sincronia + volumes); `importBackup` aceita os dois e não duplica músicas; cursor próprio `steadyCursor` (alphatab.ts): a animação de transição do alphaTab some no WebKit e a barra piscava; obs.: `enableAnimatedBeatCursor=false` não funciona no alphaTab 1.8.4 (bug em `_updateCursorHandler`); posição do YouTube nunca recua. No app para Mac o backup vai para Downloads (comando `save_backup`). **Aguardando teste do usuário.**
+
+### E. Ideias para depois da 1.0.0
+
+1. Ouvir e repetir: conferir também o ritmo (onsets × `onsetBeats`), não só a ordem das notas.
+2. Versão para **Windows** (Tauri também gera `.msi`/`.exe`): ver a nota no fim deste arquivo.
+3. Leitura de trechos curtos (várias notas na pauta), modos de ouvido, harmonia das músicas da biblioteca.
 
 ## App para Mac (Tauri)
 
@@ -222,3 +236,13 @@ Ver `CLAUDE.md`. Resumo:
 - testes para a lógica;
 - nunca versionar músicas do usuário;
 - checagens antes de commit: `npx tsc -b && npx eslint . && npx vitest run && npx vite build`.
+
+## Windows (avaliado em 2026-10-15)
+
+O app é Tauri 2 + React, então o mesmo código compila para Windows (WebView2). O que precisa de atenção:
+- **Compilar no Windows** (ou em CI `windows-latest` com GitHub Actions): `npm run desktop:build` gera `.msi`/`.exe` (NSIS). Cross-compilar do Mac não é prático.
+- `src-tauri/src/lib.rs`: o tratamento de downloads foi feito para o WebKit do macOS (que não informa o caminho do arquivo, por isso o mapa `Pending`). No WebView2 o evento de download informa o caminho; revisar e testar. O user agent "Safari" do login Google talvez precise virar um UA de Edge/Chrome no Windows.
+- `save_backup` usa `open -R` (Finder): trocar por `explorer /select,` no Windows.
+- Scripts `desktop`/`desktop:build` do package.json usam `PATH=$HOME/.cargo/bin:...` (sintaxe de shell Unix): criar variantes para Windows.
+- Áudio: entrada pela pedaleira via WebView2 (Chromium) deve funcionar; a latência no Windows depende do driver (ASIO não é usado pelo navegador).
+- O cursor e a animação que piscavam no WebKit não são problema no WebView2.
