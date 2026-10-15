@@ -96,15 +96,13 @@
     stroke-width: 2;
   }
   .marker-pop {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: marker-pop 260ms var(--ease-snap) both;
+    /* só opacidade: animar a escala de elementos SVG deixava restos desenhados no WebKit (app para Mac) */
+    animation: marker-pop 200ms ease-out both;
   }
 }
 
 @keyframes marker-pop {
   from {
-    transform: scale(0.4);
     opacity: 0;
   }
 }

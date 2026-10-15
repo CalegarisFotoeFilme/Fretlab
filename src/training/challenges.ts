@@ -74,7 +74,10 @@ function scaleChallenge(inst: Instrument, drill: Drill, root: number, name: Name
       kind, root, perBeat: 2,
       title: `Todas as ${nBoxes} ${penta ? 'caixas' : 'posições'} da ${scaleName}`,
       goal: 'Atravessar o braço inteiro no mesmo tom: a última nota de uma caixa é vizinha da primeira da próxima. Diga em voz alta onde estão as fundamentais em cada caixa.',
-      ...zigzag(Array.from({ length: nBoxes }, (_, k) => box(k)), Array.from({ length: nBoxes }, (_, k) => boxLabel(k)), Array.from({ length: nBoxes }, (_, k) => String(k + 1))),
+      // na ordem em que aparecem subindo o braço (alguma caixa pode ter descido uma oitava)
+      ...((order) => zigzag(order.map(box), order.map(boxLabel), order.map((k) => String(k + 1))))(
+        Array.from({ length: nBoxes }, (_, k) => k).sort((a, b) => Math.min(...box(a).map((p) => p.fret)) - Math.min(...box(b).map((p) => p.fret))),
+      ),
     }
   }
   if (kind === 'conectar') {

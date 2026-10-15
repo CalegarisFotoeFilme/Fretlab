@@ -246,9 +246,12 @@ export function fretOn(inst: Instrument, string: number, pc: number, min: number
 export const upAndDown = (up: FretPos[]) => [...up, ...up.slice(0, -1).reverse()]
 
 /** Desce uma oitava se a posição passar do fim do braço (e couber). */
+/** Acima desta casa, se o desenho couber uma oitava abaixo, ele é mostrado lá (região mais confortável). */
+const COMFORT = 15
+
 export function fitNeck(inst: Instrument, ps: FretPos[]) {
   const max = Math.max(...ps.map((p) => p.fret))
-  if (max <= inst.frets) return ps
+  if (max <= Math.min(COMFORT, inst.frets)) return ps
   const lowered = ps.map((p) => ({ ...p, fret: p.fret - 12 }))
   return lowered.every((p) => p.fret >= 0) ? lowered : ps
 }

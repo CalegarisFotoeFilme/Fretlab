@@ -21,6 +21,8 @@ interface Props {
   ariaLabel?: string
   /** 'auto' = vertical em telas estreitas (celular em pé), horizontal no resto. */
   orientation?: 'auto' | 'horizontal' | 'vertical'
+  /** casas do mesmo tamanho e largura fixa: o braço fica igual em qualquer região (Treino) */
+  even?: boolean
 }
 
 const TONE: Record<MarkerTone, { fill: string; text: string; ring?: string; glow?: boolean }> = {
@@ -45,7 +47,7 @@ function useIsNarrow(ref: React.RefObject<HTMLElement | null>) {
 }
 
 export function Fretboard({
-  inst, from = 0, to = 12, markers = [], activeStrings, leftHanded = false, onPick, className, ariaLabel, orientation = 'auto',
+  inst, from = 0, to = 12, markers = [], activeStrings, leftHanded = false, onPick, className, ariaLabel, orientation = 'auto', even = false,
 }: Props) {
   const gid = useId()
   const wrap = useRef<HTMLDivElement>(null)
@@ -59,10 +61,10 @@ export function Fretboard({
 
   // Geometria abstrata: "along" corre pelo braço (pestana → corpo), "across" atravessa as cordas.
   const STRING_GAP = vertical ? (nStrings > 4 ? 54 : 66) : 42
-  const OPEN = vertical ? 46 : 44
+  const OPEN = even ? 60 : vertical ? 46 : 44
   const NUT = 7
-  const BASE = vertical ? 58 : 74
-  const TAPER = vertical ? 0.985 : 0.965
+  const BASE = even ? 60 : vertical ? 58 : 74
+  const TAPER = even ? 1 : vertical ? 0.985 : 0.965
   const LABEL = vertical ? 26 : 30 // espaço para nome das cordas / número das casas
   const fretLen = (f: number) => BASE * Math.pow(TAPER, f - 1)
 
@@ -111,7 +113,7 @@ export function Fretboard({
     <div ref={wrap} className={className}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        style={vertical ? { width: '100%', maxWidth: 380, margin: '0 auto', height: 'auto', display: 'block' } : { width: '100%', minWidth: 560, maxWidth: width * 1.6, margin: '0 auto', height: 'auto', display: 'block' }}
+        style={vertical ? { width: '100%', maxWidth: 380, margin: '0 auto', height: 'auto', display: 'block' } : { width: '100%', minWidth: 560, maxWidth: even ? undefined : width * 1.6, margin: '0 auto', height: 'auto', display: 'block' }}
         role={onPick ? 'group' : 'img'}
         aria-label={ariaLabel ?? `Braço: casas ${from} a ${to}`}
       >

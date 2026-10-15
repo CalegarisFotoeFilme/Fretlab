@@ -429,7 +429,7 @@ function DrillPanel() {
           </div>
         </div>
         <div className="-mx-2 overflow-x-auto px-2 w-full max-w-3xl mx-auto">
-          <Fretboard inst={inst} from={neckFrom} to={neckTo} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
+          <Fretboard key={`${drillId}-${keyPc}-${position}-${direction}-${challenge?.title ?? ''}-${part}`} even inst={inst} from={neckFrom} to={neckTo} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
         </div>
         <p className="text-xs text-pearl-faint">
           Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(keyPc, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
