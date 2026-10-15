@@ -88,6 +88,29 @@ export const world9: World = {
       rounds: 10,
     },
     {
+      id: 'w9-quinta-posicao',
+      title: 'Lendo na 5ª posição',
+      summary: 'As mesmas notas, mais acima no braço.',
+      teach: [
+        { kind: 'text', text: 'Quem lê partitura não fica preso à primeira posição. Na 5ª posição, o dedo 1 fica na casa 5 e cada dedo cuida de uma casa (5 a 8). As notas na pauta são as mesmas; muda só onde elas moram no braço.' },
+        { kind: 'staff', notes: { string: 0, frets: [5, 7, 8] }, caption: 'Na corda mais grave, casas 5, 7 e 8 (afinação padrão): A, B, C.' },
+        { kind: 'tip', text: 'Use as notas da corda de cima como atalho: a casa 5 de uma corda é a mesma nota da corda solta seguinte (exceto G→B na guitarra, que é a casa 4).' },
+      ],
+      exercise: { type: 'read-note', answer: 'fretboard', pool: 'naturals', strings: 'all', frets: { from: 5, to: 8 } },
+      rounds: 8,
+    },
+    {
+      id: 'w9-setima-posicao',
+      title: 'Lendo na 7ª posição',
+      summary: 'Ler e tocar mais no meio do braço.',
+      teach: [
+        { kind: 'text', text: 'Na 7ª posição (casas 7 a 10), muitas notas que na primeira posição estavam em cordas soltas passam a ser presas. É uma posição ótima para ler escalas em tons com sustenidos, como Ré e Lá maior.' },
+        { kind: 'tip', text: 'Escolha uma posição antes de começar a ler e não saia dela: a mão parada facilita encontrar cada nota.' },
+      ],
+      exercise: { type: 'read-note', answer: 'play', pool: 'naturals', strings: 'all', frets: { from: 7, to: 10 } },
+      rounds: 8,
+    },
+    {
       id: 'w9-tocar',
       title: 'Lendo no instrumento',
       summary: 'Veja a nota, toque a nota.',
