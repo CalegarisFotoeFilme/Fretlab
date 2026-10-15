@@ -18,6 +18,8 @@ export interface Challenge {
   seq: FretPos[]
   /** notas por clique do metrônomo */
   perBeat: number
+  /** trechos do desafio (ex.: cada caixa), para estudar um de cada vez: [início, fim) em `seq` */
+  parts?: { label: string; tag: string; start: number; end: number }[]
 }
 
 type Rng = () => number
@@ -44,8 +46,16 @@ export function inGroups(up: FretPos[], size: number): FretPos[] {
   return [...run(up), ...run([...up].reverse())]
 }
 
-/** Caixas em zigue-zague: a primeira sobe, a próxima desce, e assim por diante. */
-const zigzag = (boxes: FretPos[][]) => boxes.flatMap((b, i) => (i % 2 ? [...b].reverse() : b))
+/** Caixas em zigue-zague: a primeira sobe, a próxima desce, e assim por diante; com os trechos marcados. */
+function zigzag(boxes: FretPos[][], labels: string[], tags: string[]) {
+  const seq: FretPos[] = []
+  const parts = boxes.map((b, i) => {
+    const start = seq.length
+    seq.push(...(i % 2 ? [...b].reverse() : b))
+    return { label: `${labels[i]} (${i % 2 ? 'desce' : 'sobe'})`, tag: tags[i], start, end: seq.length }
+  })
+  return { seq, parts }
+}
 
 function scaleChallenge(inst: Instrument, drill: Drill, root: number, name: NameFn, rng: Rng, avoid?: string): Challenge {
   const penta = drill.id !== 'maior'
@@ -54,6 +64,9 @@ function scaleChallenge(inst: Instrument, drill: Drill, root: number, name: Name
   const nBoxes = penta ? 5 : 7
   const scaleName = penta ? `pentatônica de ${name(root)}m` : `escala de ${name(root)} maior`
   const box = (k: number) => scaleByString(inst, root, steps, per, k % nBoxes)
+  // nome de cada caixa: em que grau ela começa na corda mais grave
+  const degNames = penta ? ['1', 'b3', '4', '5', 'b7'] : ['1', '2', '3', '4', '5', '6', '7']
+  const boxLabel = (k: number) => `${penta ? 'Caixa' : 'Posição'} ${(k % nBoxes) + 1}: começa no ${degNames[k % nBoxes]} (${name(mod12(root + steps[k % nBoxes]))})`
   const kinds = ['todas', 'conectar', 'corda-grau', 'grupos'].filter((k) => k !== avoid)
   const kind = pick(kinds, rng)
   if (kind === 'todas') {
@@ -61,7 +74,7 @@ function scaleChallenge(inst: Instrument, drill: Drill, root: number, name: Name
       kind, root, perBeat: 2,
       title: `Todas as ${nBoxes} ${penta ? 'caixas' : 'posições'} da ${scaleName}`,
       goal: 'Atravessar o braço inteiro no mesmo tom: a última nota de uma caixa é vizinha da primeira da próxima. Diga em voz alta onde estão as fundamentais em cada caixa.',
-      seq: zigzag(Array.from({ length: nBoxes }, (_, k) => box(k))),
+      ...zigzag(Array.from({ length: nBoxes }, (_, k) => box(k)), Array.from({ length: nBoxes }, (_, k) => boxLabel(k)), Array.from({ length: nBoxes }, (_, k) => String(k + 1))),
     }
   }
   if (kind === 'conectar') {
@@ -71,7 +84,7 @@ function scaleChallenge(inst: Instrument, drill: Drill, root: number, name: Name
       kind, root, perBeat: 2,
       title: `Conecte as caixas ${Array.from({ length: n }, (_, i) => ((start + i) % nBoxes) + 1).join(', ')} da ${scaleName}`,
       goal: 'Sobe numa caixa e desce pela seguinte, sem parar: é assim que um solo anda pelo braço em vez de ficar preso numa posição.',
-      seq: zigzag(Array.from({ length: n }, (_, i) => box(start + i))),
+      ...zigzag(Array.from({ length: n }, (_, i) => box(start + i)), Array.from({ length: n }, (_, i) => boxLabel(start + i)), Array.from({ length: n }, (_, i) => String(((start + i) % nBoxes) + 1))),
     }
   }
   if (kind === 'corda-grau') {

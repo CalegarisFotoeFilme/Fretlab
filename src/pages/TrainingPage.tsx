@@ -155,15 +155,23 @@ function DrillPanel() {
 
   // desafio sorteado sobre o tema (null = modo livre: tom e posição escolhidos à mão)
   const [challenge, setChallenge] = useState<Challenge | null>(null)
+  /** trecho do desafio em foco (null = o desafio inteiro) */
+  const [part, setPart] = useState<number | null>(null)
   const newChallenge = () => {
     stop()
     stopPreview()
     setFeedback(null)
-    setChallenge(makeChallenge(inst, drill, (pc) => noteName(pc, prefersFlats(pc)), Math.random, challenge?.kind))
+    const c = makeChallenge(inst, drill, (pc) => noteName(pc, prefersFlats(pc)), Math.random, challenge?.kind)
+    setChallenge(c)
+    // desafio em trechos (caixas): começa estudando o primeiro
+    setPart(c.parts ? 0 : null)
   }
   const seq = challenge?.seq ?? drillSequence(inst, drill, root, position)
   const perBeat = challenge?.perBeat ?? drill.perBeat
   const keyPc = challenge?.root ?? root
+  const focus = part !== null ? challenge?.parts?.[part] : undefined
+  // o que "Ouvir" toca: o trecho em foco ou a sequência inteira
+  const playSeq = focus ? seq.slice(focus.start, focus.end) : seq
   const stopPreview = () => {
     preview.current.timers.forEach((t) => clearTimeout(t))
     preview.current.metro?.stop()
@@ -214,11 +222,11 @@ function DrillPanel() {
     stop()
     const spb = 60 / target
     const gap = spb / perBeat
-    const beats = Math.ceil(seq.length / perBeat)
+    const beats = Math.ceil(playSeq.length / perBeat)
     // um compasso de contagem e depois a sequência, com o clique junto
     const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
     const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
-    const timers = seq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p)), lead + i * gap * 1000))
+    const timers = playSeq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p)), lead + i * gap * 1000))
     timers.push(window.setTimeout(() => stopPreview(), lead + beats * spb * 1000 + 200))
     preview.current = { timers, metro: m }
     setListening(true)
@@ -237,16 +245,26 @@ function DrillPanel() {
   useHotkeys({ ' ': toggle, n: newChallenge, c: toggleCompact, '-': () => changeBpm(target - 2), '=': () => changeBpm(target + 2), '+': () => changeBpm(target + 2) })
 
   // número de ordem de cada posição (a primeira vez em que ela aparece); fundamentais em laranja
-  const order = new Map<string, number>()
-  seq.forEach((p, i) => {
+  // com um trecho em foco, só ele é numerado (1, 2, 3… na ordem) e o resto aparece apagado;
+  // no desafio inteiro em caixas, cada nota mostra o número da caixa
+  const order = new Map<string, string>()
+  const shown = focus ? playSeq : seq
+  shown.forEach((p, i) => {
     const k = `${p.string}:${p.fret}`
-    if (!order.has(k)) order.set(k, i + 1)
+    if (order.has(k)) return
+    const owner = !focus && challenge?.parts?.find((pt) => i >= pt.start && i < pt.end)
+    order.set(k, owner ? owner.tag : String(i + 1))
   })
-  const markers: Marker[] = [...order.entries()].map(([k, i]) => {
-    const [string, fret] = k.split(':').map(Number)
-    const isRoot = drill.usesKey && mod12(midiAt(inst, { string, fret }) - keyPc) === 0
-    return { string, fret, tone: isRoot ? 'root' : 'neutral', label: String(i) }
-  })
+  const isRootAt = (string: number, fret: number) => drill.usesKey && mod12(midiAt(inst, { string, fret }) - keyPc) === 0
+  const markers: Marker[] = [
+    ...(focus
+      ? seq.filter((p) => !order.has(`${p.string}:${p.fret}`)).map((p) => ({ string: p.string, fret: p.fret, tone: 'ghost' as const, label: '' }))
+      : []),
+    ...[...order.entries()].map(([k, label]) => {
+      const [string, fret] = k.split(':').map(Number)
+      return { string, fret, tone: isRootAt(string, fret) ? ('root' as const) : ('neutral' as const), label }
+    }),
+  ]
   const frets = seq.map((p) => p.fret)
   // braço sempre com 12 casas (mesmo tamanho em todo exercício); só desliza se a posição passar da casa 12
   // (desafios que atravessam o braço, como as 5 caixas, mostram o trecho inteiro)
@@ -274,7 +292,20 @@ function DrillPanel() {
             <p className="eyebrow flex items-center gap-2"><Shuffle className="size-4" aria-hidden /> Desafio</p>
             <p className="mt-1 text-lg font-semibold leading-snug">{challenge.title}</p>
             <p className="mt-1.5 text-sm text-pearl-dim">{challenge.goal}</p>
+            {challenge.parts && (
+              <div className="mt-3 flex flex-col gap-1" role="radiogroup" aria-label="Trecho do desafio">
+                {challenge.parts.map((pt, i) => (
+                  <button key={i} role="radio" aria-checked={part === i} onClick={() => setPart(i)} className={`rounded-lg px-3 py-1.5 text-left text-sm ${part === i ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}>
+                    {pt.label}
+                  </button>
+                ))}
+                <button role="radio" aria-checked={part === null} onClick={() => setPart(null)} className={`rounded-lg px-3 py-1.5 text-left text-sm ${part === null ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}>
+                  Tudo junto (o número em cada nota é a caixa)
+                </button>
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
+              <Button onClick={hear}><Volume2 className="size-4" aria-hidden /> {listening ? 'Parar' : focus ? 'Ouvir este trecho' : 'Ouvir o desafio'}</Button>
               <Button variant="secondary" onClick={newChallenge}><Shuffle className="size-4" aria-hidden /> Novo desafio <Kbd>N</Kbd></Button>
               <Button variant="ghost" onClick={() => setChallenge(null)}>Modo livre</Button>
             </div>
