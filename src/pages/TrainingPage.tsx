@@ -234,6 +234,8 @@ function DrillPanel() {
     return { string, fret, tone: isRoot ? 'root' : 'neutral', label: String(i) }
   })
   const frets = seq.map((p) => p.fret)
+  // braço sempre com 12 casas (mesmo tamanho em todo exercício); só desliza se a posição passar da casa 12
+  const neckFrom = Math.min(Math.max(0, Math.max(...frets) - 12), inst.frets - 12)
   const flats = prefersFlats(root)
   const lesson = drill.lesson ? findLesson(drill.lesson) : null
 
@@ -303,7 +305,7 @@ function DrillPanel() {
           </div>
         </div>
         <div className="-mx-2 overflow-x-auto px-2 w-full max-w-3xl mx-auto">
-          <Fretboard inst={inst} from={Math.max(0, Math.min(...frets) - 1)} to={Math.min(inst.frets, Math.max(...frets) + 1)} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
+          <Fretboard inst={inst} from={neckFrom} to={neckFrom + 12} markers={markers} leftHanded={leftHanded} orientation="horizontal" onPick={(p) => playNote(midiAt(inst, p))} />
         </div>
         <p className="text-xs text-pearl-faint">
           Números = ordem de tocar (a primeira vez que cada casa aparece){drill.usesKey ? `; laranja = fundamental (${noteName(root, flats)})` : ''}. A tablatura abaixo mostra a sequência inteira, um compasso por bloco.
