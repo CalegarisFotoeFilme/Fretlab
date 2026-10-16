@@ -38,6 +38,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+          tauriScript: npx tauri
           args: --bundles nsis
       - uses: actions/upload-artifact@v4
         with:
