@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ExternalLink, FileMusic, Link2, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ExternalLink, FileMusic, LayoutGrid, Link2, List, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, PageHeader, Segmented } from '../components/ui'
@@ -25,6 +25,7 @@ function sortSongs(songs: Song[], by: 'added' | 'title' | 'artist') {
 export function LibraryPage() {
   const all = useLiveQuery(() => db.songs.toArray())
   const sortBy = useSettings((s) => s.librarySort)
+  const view = useSettings((s) => s.libraryView)
   const setSettings = useSettings((s) => s.set)
   const songs = all && sortSongs(all, sortBy)
   const [tab, setTab] = useState<'musicas' | 'repertorios'>('musicas')
@@ -97,6 +98,11 @@ export function LibraryPage() {
             ]}
           />
         )}
+        {tab === 'musicas' && (
+          <Button variant="ghost" className="ml-auto" onClick={() => setSettings({ libraryView: view === 'list' ? 'cards' : 'list' })} title={view === 'list' ? 'Ver em cards' : 'Ver em lista'}>
+            {view === 'list' ? <LayoutGrid className="size-4" aria-hidden /> : <List className="size-4" aria-hidden />} {view === 'list' ? 'Cards' : 'Lista'}
+          </Button>
+        )}
       </div>
 
       {tab === 'repertorios' ? (
@@ -104,24 +110,82 @@ export function LibraryPage() {
       ) : (
         <>
           {songs && songs.length === 0 && !adding && <EmptyState />}
-          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
-            {songs?.map((s) => <SongCard key={s.id} song={s} />)}
-          </ul>
+          {view === 'list' ? (
+            <ul className="panel overflow-hidden">
+              {songs?.map((s) => <SongItem key={s.id} song={s} list />)}
+            </ul>
+          ) : (
+            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
+              {songs?.map((s) => <SongItem key={s.id} song={s} list={false} />)}
+            </ul>
+          )}
         </>
       )}
     </div>
   )
 }
 
-function SongCard({ song }: { song: Song }) {
+const ORIGIN = (s: Song) => (s.origin === 'midi' ? 'MIDI → tab' : s.origin === 'musicxml' ? 'MusicXML' : 'Guitar Pro')
+
+/** Uma música da biblioteca, em card ou em linha. Editar (lápis) também permite trocar o arquivo. */
+function SongItem({ song, list }: { song: Song; list: boolean }) {
   // confirmação na própria página (diálogos do navegador nem sempre aparecem)
   const [confirming, setConfirming] = useState(false)
+  const [editing, setEditing] = useState(false)
   const remove = () => {
     if (confirming) void db.songs.delete(song.id!)
     else setConfirming(true)
   }
-  const [editing, setEditing] = useState(false)
-  if (editing) return <EditSong song={song} onDone={() => setEditing(false)} />
+  if (editing) return <EditSong song={song} list={list} onDone={() => setEditing(false)} />
+
+  const actions = confirming ? (
+    <span className="flex items-center gap-1">
+      <Button variant="ghost" onClick={() => setConfirming(false)}>Manter</Button>
+      <Button variant="secondary" className="text-led-red" onClick={remove}>Remover</Button>
+    </span>
+  ) : (
+    <span className="flex">
+      <Button variant="ghost" className="min-w-11 px-2" onClick={() => setEditing(true)} aria-label={`Editar ${song.title}`} title="Editar nome, artista ou arquivo">
+        <Pencil className="size-4" aria-hidden />
+      </Button>
+      <Button variant="ghost" className="min-w-11 px-2" onClick={remove} aria-label={`Remover ${song.title}`} title="Remover">
+        <Trash2 className="size-4" aria-hidden />
+      </Button>
+    </span>
+  )
+  const open = song.file && (
+    <Link to={`/musicas/${song.id}`} className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-wood-800 border border-wood-600/60 font-semibold hover:bg-wood-700">
+      Abrir no FretLab
+    </Link>
+  )
+  const songsterr = song.songsterrUrl && (
+    <Button variant="secondary" onClick={() => openSongsterr(song.songsterrUrl!)}>
+      <ExternalLink className="size-4" aria-hidden /> {list ? 'Songsterr' : 'Songsterr ao lado'}
+    </Button>
+  )
+  // sem arquivo ainda (só o link): anexar fica à vista; trocar um arquivo existente fica na edição
+  const attach = !song.file && <FilePicker song={song} label="Anexar Guitar Pro" />
+
+  if (list)
+    return (
+      <li className="flex items-center gap-4 border-b border-wood-700/60 px-3 py-2 hover:bg-wood-900/60">
+        <FileMusic className="size-5 text-enclosure shrink-0" aria-hidden />
+        <Link to={song.file ? `/musicas/${song.id}` : '#'} className="min-w-0 flex-1 grid md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)] md:gap-4">
+          <span className="truncate font-semibold">{song.title}</span>
+          <span className="truncate text-pearl-dim">{song.artist || 'Artista desconhecido'}</span>
+        </Link>
+        <span className="hidden lg:flex w-44 gap-3">
+          {song.file && <span className="eyebrow">{ORIGIN(song)}</span>}
+          {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
+        </span>
+        <span className="flex items-center gap-2">
+          {songsterr}
+          {attach}
+          {actions}
+        </span>
+      </li>
+    )
+
   return (
     <li className="panel p-4 flex flex-col gap-3 hover:border-wood-600 transition-colors">
       <div className="flex items-start gap-3">
@@ -130,61 +194,39 @@ function SongCard({ song }: { song: Song }) {
           <h2 className="font-sans text-lg font-bold truncate">{song.title}</h2>
           <p className="text-sm text-pearl-dim truncate">{song.artist || 'Artista desconhecido'}</p>
           <div className="mt-1 flex gap-3">
-            {song.file && <span className="eyebrow">{song.origin === 'midi' ? 'MIDI → tab' : song.origin === 'musicxml' ? 'MusicXML' : 'Guitar Pro'}</span>}
+            {song.file && <span className="eyebrow">{ORIGIN(song)}</span>}
             {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
           </div>
         </div>
-        {confirming ? (
-          <span className="flex items-center gap-1">
-            <Button variant="ghost" onClick={() => setConfirming(false)}>
-              Manter
-            </Button>
-            <Button variant="secondary" className="text-led-red" onClick={remove}>
-              Remover
-            </Button>
-          </span>
-        ) : (
-          <span className="flex">
-          <Button variant="ghost" className="min-w-11 px-2" onClick={() => setEditing(true)} aria-label={`Editar ${song.title}`} title="Editar nome e artista">
-            <Pencil className="size-4" aria-hidden />
-          </Button>
-          <Button variant="ghost" className="min-w-11 px-2" onClick={remove} aria-label={`Remover ${song.title}`} title="Remover">
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
-          </span>
-        )}
+        {actions}
       </div>
       <div className="flex flex-wrap gap-2 mt-auto">
-        {song.file && (
-          <Link to={`/musicas/${song.id}`} className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl bg-wood-800 border border-wood-600/60 font-semibold hover:bg-wood-700">
-            Abrir no FretLab
-          </Link>
-        )}
-        {song.songsterrUrl && (
-          <Button variant="secondary" onClick={() => openSongsterr(song.songsterrUrl!)}>
-            <ExternalLink className="size-4" aria-hidden /> Songsterr ao lado
-          </Button>
-        )}
-        {(
-          <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800/60 font-semibold cursor-pointer focus-within:outline-2 focus-within:outline-enclosure">
-            <Plus className="size-4" aria-hidden /> {song.file ? 'Trocar arquivo' : 'Anexar Guitar Pro'}
-            <input
-              type="file"
-              accept={GP_ACCEPT}
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void songFromFile(f).then(({ file, fileName, origin, skippedTracks }) => updateSong(song.id!, { file, fileName, origin, skippedTracks }))
-              }}
-            />
-          </label>
-        )}
+        {open}
+        {songsterr}
+        {attach}
       </div>
     </li>
   )
 }
 
-function EditSong({ song, onDone }: { song: Song; onDone: () => void }) {
+function FilePicker({ song, label, onPicked }: { song: Song; label: string; onPicked?: () => void }) {
+  return (
+    <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800/60 font-semibold cursor-pointer focus-within:outline-2 focus-within:outline-enclosure">
+      <Plus className="size-4" aria-hidden /> {label}
+      <input
+        type="file"
+        accept={GP_ACCEPT}
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void songFromFile(f).then(({ file, fileName, origin, skippedTracks }) => updateSong(song.id!, { file, fileName, origin, skippedTracks })).then(onPicked)
+        }}
+      />
+    </label>
+  )
+}
+
+function EditSong({ song, list, onDone }: { song: Song; list: boolean; onDone: () => void }) {
   const [title, setTitle] = useState(song.title)
   const [artist, setArtist] = useState(song.artist)
   const save = async () => {
@@ -192,9 +234,9 @@ function EditSong({ song, onDone }: { song: Song; onDone: () => void }) {
     onDone()
   }
   return (
-    <li className="panel p-4">
+    <li className={list ? 'border-b border-wood-700/60 px-3 py-3' : 'panel p-4'}>
       <form
-        className="grid gap-3"
+        className={list ? 'grid gap-3 md:grid-cols-[2fr_1.3fr_auto] md:items-end' : 'grid gap-3'}
         onSubmit={(e) => {
           e.preventDefault()
           void save()
@@ -203,9 +245,10 @@ function EditSong({ song, onDone }: { song: Song; onDone: () => void }) {
       >
         <Input label="Música" value={title} onChange={setTitle} autoFocus />
         <Input label="Artista" value={artist} onChange={setArtist} />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button type="submit">Salvar <Kbd>enter</Kbd></Button>
           <Button type="button" variant="ghost" onClick={onDone}>Cancelar <Kbd>esc</Kbd></Button>
+          <FilePicker song={song} label={song.file ? 'Trocar arquivo' : 'Anexar Guitar Pro'} onPicked={onDone} />
         </div>
       </form>
     </li>

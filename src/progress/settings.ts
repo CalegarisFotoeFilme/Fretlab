@@ -20,6 +20,8 @@ interface Settings {
   librarySort: 'added' | 'title' | 'artist'
   /** áudio do player: sintetizador ou gravação do YouTube (vale para as próximas músicas) */
   playerSource: 'midi' | 'video'
+  /** biblioteca em cards ou em linhas */
+  libraryView: 'cards' | 'list'
   set: (patch: Partial<Omit<Settings, 'set'>>) => void
 }
 
@@ -37,6 +39,7 @@ export const useSettings = create<Settings>()(
       playerVolume: 1,
       librarySort: 'added',
       playerSource: 'midi',
+      libraryView: 'cards',
       set: (patch) => set(patch),
     }),
     { name: 'fretlab-settings' },
