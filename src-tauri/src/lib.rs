@@ -146,6 +146,19 @@ fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
         })
         .position(origin.x + half, origin.y)
         .inner_size(size.width - half, size.height)
+        // canal de volta da página do Songsterr para o FretLab (importar favoritos): o script
+        // injetado navega para https://fretlab.invalid/r?d=<json>; a navegação é cancelada e vira evento
+        .on_navigation({
+            let app = handle.clone();
+            move |url| {
+                if url.host_str() != Some("fretlab.invalid") {
+                    return true;
+                }
+                let data = url.query_pairs().find(|(k, _)| k == "d").map(|(_, v)| v.to_string()).unwrap_or_default();
+                let _ = app.emit_to("main", "songsterr-report", data);
+                false
+            }
+        })
         .on_download(download_handler(handle))
         .build()
         .map_err(|e| e.to_string())?;
@@ -182,6 +195,22 @@ fn read_saved_song(app: AppHandle, name: String) -> Result<Vec<u8>, String> {
     std::fs::read(&path).map_err(|e| e.to_string())
 }
 
+/// Abre uma página na janela do Songsterr (cria a janela ao lado se ela não existir).
+#[tauri::command]
+fn songsterr_go(app: AppHandle, url: String) -> Result<(), String> {
+    match app.get_webview_window("songsterr") {
+        Some(w) => w.navigate(url.parse().map_err(|e: url::ParseError| e.to_string())?).map_err(|e| e.to_string()),
+        None => open_songsterr(app, url),
+    }
+}
+
+/// Roda um script na página do Songsterr (importar favoritos). A resposta volta pelo evento "songsterr-report".
+#[tauri::command]
+fn songsterr_eval(app: AppHandle, script: String) -> Result<(), String> {
+    let w = app.get_webview_window("songsterr").ok_or("a janela do Songsterr não está aberta")?;
+    w.eval(&script).map_err(|e| e.to_string())
+}
+
 /// Porta local em que o app é servido. Em http://localhost (e não tauri://) o player do YouTube
 /// aceita ser embutido: ele exige um "referer" de página web.
 const PORT: u16 = 47321;
@@ -193,7 +222,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .manage(Downloads::default())
         .manage(Pending::default())
-        .invoke_handler(tauri::generate_handler![open_songsterr, read_download, save_backup, read_saved_song])
+        .invoke_handler(tauri::generate_handler![open_songsterr, read_download, save_backup, read_saved_song, songsterr_go, songsterr_eval])
         .setup(|app| {
             // log em arquivo também no app final (~/Library/Logs/br.fretlab.desktop/), para depurar downloads
             app.handle().plugin(

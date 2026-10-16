@@ -40,6 +40,30 @@ export async function readSavedSong(name: string) {
   return new Uint8Array(await invoke<number[]>('read_saved_song', { name }))
 }
 
+/** Abre uma página na janela do Songsterr (abre a janela ao lado se preciso). */
+export async function songsterrGo(url: string) {
+  const { invoke } = await import('@tauri-apps/api/core')
+  await invoke('songsterr_go', { url })
+}
+
+/** Roda um script na página do Songsterr; a resposta chega por `onSongsterrReport`. */
+export async function songsterrEval(script: string) {
+  const { invoke } = await import('@tauri-apps/api/core')
+  await invoke('songsterr_eval', { script })
+}
+
+/** Mensagens que os scripts da página do Songsterr mandam de volta (JSON). */
+export async function onSongsterrReport(cb: (data: unknown) => void) {
+  const { listen } = await import('@tauri-apps/api/event')
+  return listen<string>('songsterr-report', (e) => {
+    try {
+      cb(JSON.parse(e.payload))
+    } catch {
+      // mensagem quebrada: ignora
+    }
+  })
+}
+
 /** Lê os bytes de um arquivo baixado pela janela do Songsterr. */
 export async function readDownload(path: string) {
   const { invoke } = await import('@tauri-apps/api/core')

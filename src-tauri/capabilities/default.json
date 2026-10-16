@@ -19,6 +19,8 @@
     "allow-read-download",
     "allow-save-backup",
     "allow-read-saved-song",
+    "allow-songsterr-go",
+    "allow-songsterr-eval",
     "log:default"
   ],
   "remote": {

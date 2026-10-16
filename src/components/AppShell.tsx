@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { isDesktop, onSongsterrDownload, readDownload } from '../library/desktop'
 import { isSongFile, songFromFile } from '../library/importSong'
+import { bulkTookImport } from '../library/bulkImport'
 import { db } from '../progress/db'
 import { useSettings } from '../progress/settings'
 import { applyInstrumentVoice, resetVoices } from '../audio/sfVoice'
@@ -28,7 +29,8 @@ function useSongsterrImports() {
         const page = d.pageUrl && /songsterr\.com\/a\//.test(d.pageUrl) ? d.pageUrl : undefined
         const id = await db.songs.add({ ...song, songsterrUrl: page })
         log(`importado como música ${id}`)
-        navigate(`/musicas/${id}`)
+        // na importação dos favoritos, segue para a próxima em vez de abrir a música
+        if (!bulkTookImport(id as number)) navigate(`/musicas/${id}`)
       } catch (e) {
         log(`falha ao importar ${d.name}: ${String(e)}`)
         console.error('Não foi possível importar o download do Songsterr', e)

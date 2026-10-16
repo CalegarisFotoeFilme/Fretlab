@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router'
 import { Button, PageHeader, Segmented } from '../components/ui'
 import { Kbd } from '../components/useHotkeys'
 import { Playlists } from '../library/Playlists'
+import { BulkImportButton, BulkImportPanel } from '../library/BulkImportPanel'
 import { useSettings } from '../progress/settings'
 import { updateSong } from '../progress/songs'
 import { openSongsterr, parseSongsterrUrl } from '../library/alphatab'
@@ -62,6 +63,7 @@ export function LibraryPage() {
             <ExternalLink className="size-4" aria-hidden /> Abrir o Songsterr ao lado
           </Button>
         )}
+        {isDesktop() && <BulkImportButton />}
       </div>
       {isDesktop() && (
         <p className="-mt-5 mb-8 text-sm text-pearl-faint">
@@ -69,6 +71,7 @@ export function LibraryPage() {
         </p>
       )}
 
+      {isDesktop() && <BulkImportPanel />}
       {status && (
         <p role="status" className="panel p-3 mb-6 text-pearl-dim">
           {status}
