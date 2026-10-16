@@ -17,7 +17,9 @@ import { db, type Song } from '../progress/db'
 
 /** Lê, em segundo plano, as faixas e afinações das músicas que ainda não têm (uma por vez). */
 function useTrackScan(all: Song[] | undefined) {
-  const pending = all?.filter((s) => s.file && !s.tracks).map((s) => s.id!) ?? []
+  // sem leitura ou leitura antiga (sem o instrumento MIDI): lê de novo
+  const stale = (s: Song) => !s.tracks || s.tracks.some((t) => t.program === undefined)
+  const pending = all?.filter((s) => s.file && stale(s)).map((s) => s.id!) ?? []
   const key = pending.join(',')
   useEffect(() => {
     if (!key) return
@@ -26,7 +28,7 @@ function useTrackScan(all: Song[] | undefined) {
       for (const id of key.split(',').map(Number)) {
         if (cancelled) return
         const song = await db.songs.get(id)
-        if (!song?.file || song.tracks) continue
+        if (!song?.file || (song.tracks && !song.tracks.some((t) => t.program === undefined))) continue
         // arquivo ilegível: lista vazia (não tenta de novo a cada visita)
         const tracks = await readTracksMeta(song).catch(() => [])
         if (!cancelled) await updateSong(id, { tracks })

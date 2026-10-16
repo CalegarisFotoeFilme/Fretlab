@@ -19,5 +19,10 @@ describe('afinação das músicas', () => {
     expect(trackFamily('Bass', [28, 33, 38, 43])).toBe('bass')
     expect(trackFamily('Guitarra base', [40, 45, 50, 55, 59, 64])).toBe('guitar')
     expect(trackFamily('Vocals', [])).toBe('other')
+    // o Songsterr escreve piano como tab, até com "afinação de baixo": o instrumento MIDI decide
+    expect(trackFamily('Electric Piano (Left Hand)', [23, 28, 33, 38, 43], 4)).toBe('other')
+    expect(trackFamily('Acoustic Grand Piano', [40, 45, 50, 55, 59, 64], 0)).toBe('other')
+    expect(trackFamily('Electric Bass (finger)', [28, 33, 38, 43], 33)).toBe('bass')
+    expect(trackFamily('Distortion Guitar', [40, 45, 50, 55, 59, 64], 30)).toBe('guitar')
   })
 })

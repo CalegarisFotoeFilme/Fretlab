@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Paus
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { playlistSongUrl } from '../library/Playlists'
+import { trackFamily } from '../library/songMeta'
 import { readSongBytes, updateSong } from '../progress/songs'
 import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
@@ -735,7 +736,8 @@ function PlaylistNav() {
 
 function pickTrack(score: AT.model.Score, kind: string): AT.model.Track {
   const melodic = score.tracks.filter((t) => !t.isPercussion)
-  const isBassTrack = (t: AT.model.Track) => /bass|baixo/i.test(t.name) || Math.min(...(t.staves[0]?.tuning ?? [99])) < 36
-  const wantBass = kind !== 'guitar6'
-  return melodic.find((t) => isBassTrack(t) === wantBass) ?? melodic[0] ?? score.tracks[0]
+  // piano e teclados também vêm como tab (com afinação inventada): o instrumento MIDI decide
+  const family = (t: AT.model.Track) => trackFamily(t.name, [...(t.staves[0]?.tuning ?? [])], t.playbackInfo?.program)
+  const want = kind === 'guitar6' ? 'guitar' : 'bass'
+  return melodic.find((t) => family(t) === want) ?? melodic[0] ?? score.tracks[0]
 }

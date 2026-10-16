@@ -15,11 +15,22 @@ export interface TrackMeta {
   family: Family
   /** afinação em MIDI, da corda mais grave para a mais aguda */
   tuning: number[]
+  /** instrumento General MIDI da faixa (ausente nas leituras antigas: a música é relida) */
+  program?: number
 }
 
-/** Classifica uma faixa: baixo pelo nome ou pela corda mais grave; guitarra com 6 a 8 cordas. */
-export function trackFamily(name: string, tuning: number[]): Family {
+/**
+ * Classifica uma faixa. O Songsterr escreve piano, teclado e sintetizador também como tablatura
+ * (com afinações inventadas), então quem decide é o instrumento General MIDI: 24–31 guitarras,
+ * 32–39 baixos. Sem essa informação, vale o nome e a corda mais grave.
+ */
+export function trackFamily(name: string, tuning: number[], program?: number): Family {
   if (!tuning.length) return 'other'
+  if (program !== undefined && program >= 0) {
+    if (program >= 32 && program <= 39) return 'bass'
+    if (program >= 24 && program <= 31) return 'guitar'
+    return /\b(bass|baixo)\b/i.test(name) ? 'bass' : /guit|violão/i.test(name) ? 'guitar' : 'other'
+  }
   if (/bass|baixo/i.test(name) || Math.min(...tuning) < 36) return 'bass'
   return tuning.length >= 6 && tuning.length <= 8 ? 'guitar' : 'other'
 }
@@ -29,7 +40,8 @@ export function tracksOf(score: AT.model.Score): TrackMeta[] {
     .filter((t) => !t.isPercussion && !t.staves[0]?.isPercussion)
     .map((t) => {
       const tuning = [...(t.staves[0]?.tuning ?? [])].sort((a, b) => a - b)
-      return { name: t.name, family: trackFamily(t.name, tuning), tuning }
+      const program = t.playbackInfo?.program ?? -1
+      return { name: t.name, family: trackFamily(t.name, tuning, program), tuning, program }
     })
 }
 
