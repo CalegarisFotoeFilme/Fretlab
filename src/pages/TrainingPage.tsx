@@ -11,6 +11,8 @@ import { findLesson } from '../curriculum'
 import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
 import { dueFacts } from '../progress/facts'
+import { GM } from '../audio/sf2'
+import { playProgramNote } from '../audio/sfVoice'
 import { makeChallenge, type Challenge } from '../training/challenges'
 import type { Step } from '../training/slap'
 import { IntervalEar } from '../training/IntervalEar'
@@ -248,16 +250,22 @@ function DrillPanel() {
     const spb = 60 / target
     const gap = spb / perBeat
     const beats = Math.ceil(playSeq.length / perBeat)
-    // um compasso de contagem e depois a sequência, com o clique junto
-    const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
-    const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
+    // começa já (sem compasso de contagem), com o clique junto
+    const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats })
+    const lead = (m.startTime - audioCtx().currentTime) * 1000
     // como num instrumento: cada nota corta a anterior; a última decai sozinha
     const timers = playSeq.map((p, i) =>
       window.setTimeout(() => {
         if (p.rest) return silenceNotes()
+        const cut = i < playSeq.length - 1 ? gap : undefined
+        // slap: timbre de slap bass (pop no "Slap Bass 2", mais estalado)
+        if (drill.id === 'slap') {
+          const program = p.mark === 'P' ? GM.slapBass2 : GM.slapBass1
+          return p.ghost ? playProgramNote(program, midiAt(inst, p), 0.25, 0.04) : playProgramNote(program, midiAt(inst, p), 0.6, cut)
+        }
         // ghost note: um "tuc" curto e baixo (corda abafada); notas: cortam a anterior, a última decai
         if (p.ghost) return playNote(midiAt(inst, p), 0, 0.22, false, 0.035)
-        playNote(midiAt(inst, p), 0, 0.6, false, i < playSeq.length - 1 ? gap : undefined)
+        playNote(midiAt(inst, p), 0, 0.6, false, cut)
       }, lead + i * gap * 1000),
     )
     timers.push(window.setTimeout(() => stopPreview(), lead + beats * spb * 1000 + 200))

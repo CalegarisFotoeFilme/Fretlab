@@ -12,6 +12,8 @@ describe.skipIf(!existsSync(PATH))('SoundFont', () => {
     for (let midi = 28; midi <= 76; midi++) {
       expect(zonesFor(sf, GM.fingerBass, midi).length, `baixo ${midi}`).toBeGreaterThan(0)
       expect(zonesFor(sf, GM.cleanGuitar, midi).length, `guitarra ${midi}`).toBeGreaterThan(0)
+      expect(zonesFor(sf, GM.slapBass1, midi).length, `slap ${midi}`).toBeGreaterThan(0)
+      expect(zonesFor(sf, GM.slapBass2, midi).length, `slap 2 ${midi}`).toBeGreaterThan(0)
     }
   })
   it('a velocidade de reprodução leva o sample até a nota certa', () => {

@@ -1,4 +1,4 @@
-import { audioCtx, setNoteVoice, trackNote } from './engine'
+import { audioCtx, playNote, setNoteVoice, trackNote } from './engine'
 import { GM, parseSf2, playbackRate, zonesFor, type SoundFont } from './sf2'
 
 /*
@@ -7,6 +7,8 @@ import { GM, parseSf2, playbackRate, zonesFor, type SoundFont } from './sf2'
 */
 
 let loading: Promise<SoundFont | null> | null = null
+/** SoundFont já carregado (para tocar um programa específico sem esperar) */
+let loaded: SoundFont | null = null
 const buffers = new Map<number, AudioBuffer>()
 
 /** Carrega (uma vez) o SoundFont. `null` se não houver nenhum disponível (versão do claude.ai). */
@@ -18,7 +20,7 @@ export function loadVoices(): Promise<SoundFont | null> {
     const url = alphaTabPaths().soundFont
     if (!url) return null
     return parseSf2(await (await fetch(url)).arrayBuffer())
-  })().catch((e) => {
+  })().then((sf) => (loaded = sf)).catch((e) => {
     console.error('SoundFont para o treino de ouvido:', e)
     return null
   })
@@ -28,6 +30,7 @@ export function loadVoices(): Promise<SoundFont | null> {
 /** O SoundFont mudou em Ajustes: recarregar na próxima nota. */
 export function resetVoices() {
   loading = null
+  loaded = null
   buffers.clear()
 }
 
@@ -87,4 +90,14 @@ export async function applyInstrumentVoice(kind: 'bass' | 'guitar') {
   const sf = await loadVoices()
   const program = kind === 'bass' ? GM.fingerBass : GM.cleanGuitar
   setNoteVoice(sf ? (midi, when, gain, dur) => playVoice(sf, program, midi, when, gain, dur ?? 1.6, dur !== undefined) : null)
+}
+
+/**
+ * Toca uma nota com um programa GM específico (ex.: slap bass), se o SoundFont já estiver
+ * carregado; senão cai no timbre normal do app. `cut` = a próxima nota corta esta.
+ */
+export function playProgramNote(program: number, midi: number, gain = 0.6, cut?: number, at?: number) {
+  const when = at ?? audioCtx().currentTime
+  if (loaded && playVoice(loaded, program, midi, when, gain, cut ?? 1.6, cut !== undefined)) return
+  playNote(midi, when, gain, false, cut)
 }

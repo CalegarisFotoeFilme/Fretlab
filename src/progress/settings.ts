@@ -14,6 +14,10 @@ interface Settings {
   sensitivity: number
   latencyMs: number // compensação de atraso da entrada (toque/instrumento)
   onboarded: boolean
+  /** volume geral do player, o mesmo para todas as músicas (fica o último usado) */
+  playerVolume: number
+  /** ordem da biblioteca */
+  librarySort: 'added' | 'title' | 'artist'
   set: (patch: Partial<Omit<Settings, 'set'>>) => void
 }
 
@@ -28,6 +32,8 @@ export const useSettings = create<Settings>()(
       sensitivity: 0.01,
       latencyMs: 0,
       onboarded: false,
+      playerVolume: 1,
+      librarySort: 'added',
       set: (patch) => set(patch),
     }),
     { name: 'fretlab-settings' },

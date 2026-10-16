@@ -163,4 +163,4 @@ export function zonesFor(sf: SoundFont, program: number, midi: number, bank = 0)
 export const playbackRate = (z: SfZone, midi: number) => 2 ** ((midi - z.rootKey) / 12 + z.tuneCents / 1200)
 
 /** Programas General MIDI usados pelo app (0 = primeiro). */
-export const GM = { fingerBass: 33, cleanGuitar: 27 } as const
+export const GM = { fingerBass: 33, slapBass1: 36, slapBass2: 37, cleanGuitar: 27 } as const

@@ -2,6 +2,8 @@ import { Eye, Headphones, Mic, MicOff, RotateCcw, SkipForward } from 'lucide-rea
 import { useEffect, useRef, useState } from 'react'
 import { audioCtx, playClick, playNote, uiSound } from '../audio/engine'
 import { useAudioInput } from '../audio/useInput'
+import { GM } from '../audio/sf2'
+import { playProgramNote } from '../audio/sfVoice'
 import { RhythmStaff } from '../components/RhythmStaff'
 import { Button, Segmented } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
@@ -77,12 +79,20 @@ export function EchoTrainer() {
     for (let b = 0; b < 4; b++) playClick(t0 + b * spb, b === 0)
     const start = t0 + 4 * spb
     const onsets = onsetBeats(parsePattern(p.pattern))
+    const slap = !!p.marks?.some((m) => m === 'T' || m === 'P')
     onsets.forEach((beat, i) => {
       const d = p.degrees[i]
       // como num instrumento: o próximo ataque corta a nota; a última decai sozinha
       const next = onsets[i + 1]
-      if (d === null) playClick(start + beat * spb, false)
-      else playNote(root + d, start + beat * spb, 0.6, false, next === undefined ? undefined : (next - beat) * spb)
+      const at = start + beat * spb
+      const cut = next === undefined ? undefined : (next - beat) * spb
+      // grooves de slap (com T/P) tocam com timbre de slap bass; ghost note = "tuc" abafado
+      if (slap) {
+        const program = p.marks?.[i] === 'P' ? GM.slapBass2 : GM.slapBass1
+        if (d === null) playProgramNote(program, root, 0.25, 0.04, at)
+        else playProgramNote(program, root + d, 0.6, cut, at)
+      } else if (d === null) playClick(at, false)
+      else playNote(root + d, at, 0.6, false, cut)
     })
     const endMs = (start - audioCtx().currentTime + phraseBeats(p) * spb) * 1000
     timers.current.push(window.setTimeout(() => setPhase('listening'), endMs))

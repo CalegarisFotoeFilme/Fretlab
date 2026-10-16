@@ -92,6 +92,11 @@ export function SongPage() {
       // sem armazenamento local: só não lembra
     }
   }
+  /** tocar recolhe o painel de configurações (a tab fica livre); pausar não mexe */
+  const playPause = () => {
+    if (!playing) setExpanded(false)
+    apiRef.current?.playPause()
+  }
   const [view, setView] = useState<View>('tab')
   const [time, setTime] = useState({ cur: 0, end: 0 })
   // compasso em análise (segue o cursor) e metrônomo visual: tempo atual e tempos do compasso
@@ -155,10 +160,10 @@ export function SongPage() {
         })
         inst.playerReady.on(() => {
           setReady(true)
-          // volumes salvos desta música
+          // volume geral: o último usado (vale para todas as músicas); por faixa: salvo nesta música
+          inst.masterVolume = useSettings.getState().playerVolume
           const mix = songRef.current?.mix
           if (mix) {
-            inst.masterVolume = mix.master
             for (const [i, v] of Object.entries(mix.tracks)) {
               const t = inst.score?.tracks[Number(i)]
               if (t) inst.changeTrackVolume([t], v)
@@ -256,7 +261,9 @@ export function SongPage() {
     applyMix(mix, t, muteMine)
   }
   // volumes: geral e por faixa, salvos na música
-  const levels = song?.mix ?? { master: 1, tracks: {} }
+  const playerVolume = useSettings((s) => s.playerVolume)
+  const setPlayerVolume = useSettings((s) => s.set)
+  const levels = { master: playerVolume, tracks: song?.mix?.tracks ?? {} }
   // grava em cima do valor atual do banco (mexer rápido em dois sliders não perde nada)
   const saveMix = (change: (m: { master: number; tracks: Record<number, number> }) => void) => {
     if (!song?.id) return
@@ -272,9 +279,7 @@ export function SongPage() {
   const changeMaster = (v: number) => {
     const api = apiRef.current
     if (api) api.masterVolume = v
-    saveMix((m) => {
-      m.master = v
-    })
+    setPlayerVolume({ playerVolume: v })
   }
   const changeTrackVolume = (t: AT.model.Track, v: number) => {
     apiRef.current?.changeTrackVolume([t], v)
@@ -331,7 +336,7 @@ export function SongPage() {
   }
 
   useHotkeys({
-    ' ': () => ready && apiRef.current?.playPause(),
+    ' ': () => ready && playPause(),
     Escape: () => apiRef.current?.stop(),
     l: toggleLoop,
     m: toggleMetronome,
@@ -566,7 +571,7 @@ export function SongPage() {
 
           {/* barra compacta: sempre visível */}
           <div className="flex items-center gap-2 rounded-2xl border border-wood-700 bg-wood-900/95 backdrop-blur p-2 shadow-2xl">
-            <Button onClick={() => apiRef.current?.playPause()} disabled={!ready} className="min-w-44 shrink-0 whitespace-nowrap" aria-label={playing ? 'Pausar' : 'Tocar'}>
+            <Button onClick={playPause} disabled={!ready} className="min-w-44 shrink-0 whitespace-nowrap" aria-label={playing ? 'Pausar' : 'Tocar'}>
               {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
               <span className="hidden sm:inline">{ready ? (playing ? 'Pausar' : 'Tocar') : 'Carregando…'}</span> <Kbd>espaço</Kbd>
             </Button>
