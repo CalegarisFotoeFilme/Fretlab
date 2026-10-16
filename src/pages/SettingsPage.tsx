@@ -165,7 +165,7 @@ export function SettingsPage() {
         </Field>
 
         <BackupField label="Backup dos estudos" hint="Lições, estrelas, sequência de dias e o treino. Exporte para guardar ou continuar em outro aparelho." onExport={() => doExport('progresso')} onImport={doImport} />
-        <BackupField label="Backup da biblioteca" hint="Todas as músicas: os arquivos das tabs, a sincronia com o YouTube e os volumes. Importar não duplica músicas que já estão aqui." onExport={() => doExport('biblioteca')} onImport={doImport} />
+        <BackupField label="Backup da biblioteca" hint="Todas as músicas (arquivos das tabs, nomes editados, sincronia com o YouTube, volumes das faixas), os repertórios e as preferências da biblioteca (ordem e volume geral do player). Importar não duplica músicas que já estão aqui." onExport={() => doExport('biblioteca')} onImport={doImport} />
         {msg && <p role="status" className="text-pearl-dim">{msg}</p>}
       </div>
     </div>

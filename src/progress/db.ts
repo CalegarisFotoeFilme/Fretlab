@@ -46,6 +46,14 @@ export interface DrillProgress {
 }
 
 /** Arquivos grandes do usuário (ex.: o SoundFont do player). Fora do backup JSON. */
+/** Repertório: músicas da biblioteca para estudar em ordem (ex.: "Treino igreja"). */
+export interface Playlist {
+  id?: number
+  name: string
+  songIds: number[]
+  createdAt: number
+}
+
 export interface Asset {
   id: 'soundfont'
   name: string
@@ -60,6 +68,7 @@ export const db = new Dexie('fretlab') as Dexie & {
   drills: EntityTable<DrillProgress, 'id'>
   assets: EntityTable<Asset, 'id'>
   facts: EntityTable<import('./facts').FactProgress, 'key'>
+  playlists: EntityTable<Playlist, 'id'>
 }
 
 db.version(1).stores({
@@ -73,3 +82,5 @@ db.version(2).stores({ drills: 'id' })
 db.version(3).stores({ assets: 'id' })
 // v4: revisão por fato errado (nota/casa, intervalo, grau)
 db.version(4).stores({ facts: 'key, due' })
+// v5: repertórios (listas de músicas para estudar em ordem)
+db.version(5).stores({ playlists: '++id, name' })

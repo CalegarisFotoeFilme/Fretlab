@@ -1,16 +1,32 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ExternalLink, FileMusic, Link2, Plus, Trash2, Upload } from 'lucide-react'
+import { ExternalLink, FileMusic, Link2, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Button, PageHeader } from '../components/ui'
+import { Button, PageHeader, Segmented } from '../components/ui'
+import { Kbd } from '../components/useHotkeys'
+import { Playlists } from '../library/Playlists'
+import { useSettings } from '../progress/settings'
 import { openSongsterr, parseSongsterrUrl } from '../library/alphatab'
 import { isDesktop } from '../library/desktop'
 import { GP_ACCEPT, songFromFile } from '../library/importSong'
 import { db, type Song } from '../progress/db'
 
 
+const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
+/** ordena a biblioteca: mais recentes, por título ou por artista (e título dentro do artista) */
+function sortSongs(songs: Song[], by: 'added' | 'title' | 'artist') {
+  const xs = [...songs]
+  if (by === 'added') return xs.sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0))
+  if (by === 'title') return xs.sort((a, b) => collator.compare(a.title, b.title))
+  return xs.sort((a, b) => collator.compare(a.artist || '~', b.artist || '~') || collator.compare(a.title, b.title))
+}
+
 export function LibraryPage() {
-  const songs = useLiveQuery(() => db.songs.orderBy('addedAt').reverse().toArray())
+  const all = useLiveQuery(() => db.songs.toArray())
+  const sortBy = useSettings((s) => s.librarySort)
+  const setSettings = useSettings((s) => s.set)
+  const songs = all && sortSongs(all, sortBy)
+  const [tab, setTab] = useState<'musicas' | 'repertorios'>('musicas')
   const [adding, setAdding] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -58,11 +74,40 @@ export function LibraryPage() {
       )}
       {adding && <AddLink onDone={() => setAdding(false)} />}
 
-      {songs && songs.length === 0 && !adding && <EmptyState />}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <Segmented<'musicas' | 'repertorios'>
+          label="Ver"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'musicas', label: `Músicas${all ? ` (${all.length})` : ''}` },
+            { value: 'repertorios', label: 'Repertórios' },
+          ]}
+        />
+        {tab === 'musicas' && (
+          <Segmented<'added' | 'title' | 'artist'>
+            label="Ordenar"
+            value={sortBy}
+            onChange={(v) => setSettings({ librarySort: v })}
+            options={[
+              { value: 'added', label: 'Mais recentes' },
+              { value: 'title', label: 'Música A–Z' },
+              { value: 'artist', label: 'Artista A–Z' },
+            ]}
+          />
+        )}
+      </div>
 
-      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
-        {songs?.map((s) => <SongCard key={s.id} song={s} />)}
-      </ul>
+      {tab === 'repertorios' ? (
+        <Playlists songs={all ?? []} />
+      ) : (
+        <>
+          {songs && songs.length === 0 && !adding && <EmptyState />}
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
+            {songs?.map((s) => <SongCard key={s.id} song={s} />)}
+          </ul>
+        </>
+      )}
     </div>
   )
 }
@@ -74,6 +119,8 @@ function SongCard({ song }: { song: Song }) {
     if (confirming) void db.songs.delete(song.id!)
     else setConfirming(true)
   }
+  const [editing, setEditing] = useState(false)
+  if (editing) return <EditSong song={song} onDone={() => setEditing(false)} />
   return (
     <li className="panel p-4 flex flex-col gap-3 hover:border-wood-600 transition-colors">
       <div className="flex items-start gap-3">
@@ -96,9 +143,14 @@ function SongCard({ song }: { song: Song }) {
             </Button>
           </span>
         ) : (
+          <span className="flex">
+          <Button variant="ghost" className="min-w-11 px-2" onClick={() => setEditing(true)} aria-label={`Editar ${song.title}`} title="Editar nome e artista">
+            <Pencil className="size-4" aria-hidden />
+          </Button>
           <Button variant="ghost" className="min-w-11 px-2" onClick={remove} aria-label={`Remover ${song.title}`} title="Remover">
             <Trash2 className="size-4" aria-hidden />
           </Button>
+          </span>
         )}
       </div>
       <div className="flex flex-wrap gap-2 mt-auto">
@@ -127,6 +179,34 @@ function SongCard({ song }: { song: Song }) {
           </label>
         )}
       </div>
+    </li>
+  )
+}
+
+function EditSong({ song, onDone }: { song: Song; onDone: () => void }) {
+  const [title, setTitle] = useState(song.title)
+  const [artist, setArtist] = useState(song.artist)
+  const save = async () => {
+    await db.songs.update(song.id!, { title: title.trim() || song.title, artist: artist.trim() })
+    onDone()
+  }
+  return (
+    <li className="panel p-4">
+      <form
+        className="grid gap-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void save()
+        }}
+        onKeyDown={(e) => e.key === 'Escape' && onDone()}
+      >
+        <Input label="Música" value={title} onChange={setTitle} autoFocus />
+        <Input label="Artista" value={artist} onChange={setArtist} />
+        <div className="flex gap-2">
+          <Button type="submit">Salvar <Kbd>enter</Kbd></Button>
+          <Button type="button" variant="ghost" onClick={onDone}>Cancelar <Kbd>esc</Kbd></Button>
+        </div>
+      </form>
     </li>
   )
 }

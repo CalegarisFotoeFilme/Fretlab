@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, type LessonProgress, type Song } from './db'
+import { useSettings } from './settings'
 import { dayKey, levelFromXp, starsFor, streak, xpFor } from './scoring'
 
 export interface AttemptResult {
@@ -102,15 +103,21 @@ export async function exportProgress() {
 
 /** Backup da biblioteca: músicas com arquivo, sincronia do YouTube e volumes. */
 export async function exportLibrary() {
-  const songs = await db.songs.toArray()
-  const library: SongBackup[] = await Promise.all(
+  const [songs, playlists] = await Promise.all([db.songs.toArray(), db.playlists.toArray()])
+  // `ref` = id original: os repertórios apontam para ele (no outro aparelho os ids mudam)
+  const library: (SongBackup & { ref?: number })[] = await Promise.all(
     songs.map(async (song) => {
-      const { file, ...rest } = song
-      delete rest.id
-      return { ...rest, file: file ? await toBase64(file) : undefined }
+      const { file, id, ...rest } = song
+      return { ...rest, ref: id, file: file ? await toBase64(file) : undefined }
     }),
   )
-  return JSON.stringify({ app: 'fretlab', kind: 'library', version: 1, exportedAt: new Date().toISOString(), songs: library })
+  const { librarySort, playerVolume } = useSettings.getState()
+  return JSON.stringify({
+    app: 'fretlab', kind: 'library', version: 2, exportedAt: new Date().toISOString(),
+    songs: library,
+    playlists: playlists.map(({ name, songIds, createdAt }) => ({ name, songRefs: songIds, createdAt })),
+    settings: { librarySort, playerVolume },
+  })
 }
 
 /** Importa qualquer backup do FretLab (estudos, biblioteca ou o antigo com os dois). Diz o que entrou. */
@@ -129,15 +136,39 @@ export async function importBackup(json: string) {
   }
   // biblioteca: não duplica música que já existe aqui (mesmo nome de arquivo e tamanho)
   if (Array.isArray(data.songs)) {
-    const existing = new Set((await db.songs.toArray()).map((s) => `${s.fileName}|${s.file?.size}`))
+    const existing = new Map((await db.songs.toArray()).map((s) => [`${s.fileName}|${s.file?.size}|${s.title}`, s.id!]))
+    // id original (no aparelho de origem) → id aqui
+    const idOf = new Map<number, number>()
     let added = 0
-    for (const raw of data.songs as SongBackup[]) {
+    for (const { ref, ...raw } of data.songs as (SongBackup & { ref?: number })[]) {
       const file = raw.file ? fromBase64(raw.file) : undefined
-      if (existing.has(`${raw.fileName}|${file?.size}`)) continue
-      await db.songs.add({ ...raw, file } as Song)
-      added++
+      const key = `${raw.fileName}|${file?.size}|${raw.title}`
+      let id = existing.get(key)
+      if (id === undefined) {
+        id = (await db.songs.add({ ...raw, file } as Song)) as number
+        existing.set(key, id)
+        added++
+      }
+      if (ref !== undefined) idOf.set(ref, id)
     }
     done.push(`${added} ${added === 1 ? 'música nova' : 'músicas novas'} na biblioteca`)
+    // repertórios: os de mesmo nome são substituídos pela versão do backup
+    if (Array.isArray(data.playlists)) {
+      for (const pl of data.playlists as { name: string; songRefs: number[]; createdAt: number }[]) {
+        const songIds = pl.songRefs.map((r) => idOf.get(r)).filter((x): x is number => x !== undefined)
+        const same = await db.playlists.where('name').equals(pl.name).first()
+        if (same) await db.playlists.update(same.id!, { songIds })
+        else await db.playlists.add({ name: pl.name, songIds, createdAt: pl.createdAt })
+      }
+      done.push(`${data.playlists.length} ${data.playlists.length === 1 ? 'repertório' : 'repertórios'}`)
+    }
+    if (data.settings) {
+      const { librarySort, playerVolume } = data.settings
+      useSettings.getState().set({
+        ...(['added', 'title', 'artist'].includes(librarySort) ? { librarySort } : {}),
+        ...(typeof playerVolume === 'number' ? { playerVolume } : {}),
+      })
+    }
   }
   return done
 }

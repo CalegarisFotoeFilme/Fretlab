@@ -1,8 +1,9 @@
 import type * as AT from '@coderline/alphatab'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, Square, Timer, Video, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Pause, Play, Repeat, SkipBack, SkipForward, Square, Timer, Video, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { playlistSongUrl } from '../library/Playlists'
 import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
@@ -27,7 +28,13 @@ const MIXES: { value: Mix; label: string; hint: string; kbd: string }[] = [
   { value: 'click', label: 'Faixa + metrônomo', hint: 'A faixa escolhida com o metrônomo', kbd: '4' },
 ]
 
+/** Cada música monta um player novo (trocar de música no repertório recria tudo). */
 export function SongPage() {
+  const { id } = useParams()
+  return <SongView key={id} />
+}
+
+function SongView() {
   const { id } = useParams()
   const song = useLiveQuery(() => db.songs.get(Number(id)), [id])
   const inst = useInstrument()
@@ -382,6 +389,7 @@ export function SongPage() {
             <h1 className="text-4xl font-black uppercase truncate">{song.title}</h1>
             <p className="text-pearl-dim truncate">{song.artist || 'Artista desconhecido'}</p>
           </div>
+          <PlaylistNav />
           {/* metrônomo visual em destaque, fora dos controles minimizáveis */}
           <div className="flex items-center gap-3 rounded-2xl border border-wood-700/70 bg-wood-950/60 px-4 py-2.5">
             <BeatLights beat={beat} />
@@ -686,6 +694,32 @@ function Toggle({ on, onClick, icon, label, kbd }: { on: boolean; onClick: () =>
 }
 
 /** Escolhe a faixa que combina com o instrumento configurado. */
+/** No repertório: posição e botões de música anterior/próxima (Page Up / Page Down). */
+function PlaylistNav() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const plId = Number(params.get('repertorio'))
+  const i = Number(params.get('i') ?? 0)
+  const pl = useLiveQuery(() => (plId ? db.playlists.get(plId) : undefined), [plId])
+  const go = (j: number) => pl && j >= 0 && j < pl.songIds.length && navigate(playlistSongUrl(pl, j))
+  useHotkeys({ PageDown: () => go(i + 1), PageUp: () => go(i - 1) })
+  if (!pl) return null
+  return (
+    <div className="flex items-center gap-1 rounded-2xl border border-wood-700/70 bg-wood-950/60 px-2 py-1.5">
+      <Button variant="ghost" className="min-w-11 px-2" disabled={i <= 0} onClick={() => go(i - 1)} aria-label="Música anterior do repertório" title="Anterior (Page Up)">
+        <SkipBack className="size-4" aria-hidden />
+      </Button>
+      <span className="px-1 text-center leading-tight">
+        <span className="block max-w-40 truncate text-xs text-pearl-faint">{pl.name}</span>
+        <span className="font-mono text-sm font-bold">{i + 1} de {pl.songIds.length}</span>
+      </span>
+      <Button variant="ghost" className="min-w-11 px-2" disabled={i >= pl.songIds.length - 1} onClick={() => go(i + 1)} aria-label="Próxima música do repertório" title="Próxima (Page Down)">
+        <SkipForward className="size-4" aria-hidden />
+      </Button>
+    </div>
+  )
+}
+
 function pickTrack(score: AT.model.Score, kind: string): AT.model.Track {
   const melodic = score.tracks.filter((t) => !t.isPercussion)
   const isBassTrack = (t: AT.model.Track) => /bass|baixo/i.test(t.name) || Math.min(...(t.staves[0]?.tuning ?? [99])) < 36
