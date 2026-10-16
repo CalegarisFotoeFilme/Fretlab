@@ -169,7 +169,7 @@ export async function importBackup(json: string) {
         ...(libraryTuning === null || typeof libraryTuning === 'string' ? { libraryTuning: libraryTuning ?? null } : {}),
         ...(['cards', 'list'].includes(libraryView) ? { libraryView } : {}),
         ...(['midi', 'video'].includes(playerSource) ? { playerSource } : {}),
-        ...(['added', 'title', 'artist'].includes(librarySort) ? { librarySort } : {}),
+        ...(['added', 'title', 'artist', 'group'].includes(librarySort) ? { librarySort } : {}),
         ...(typeof playerVolume === 'number' ? { playerVolume } : {}),
       })
     }

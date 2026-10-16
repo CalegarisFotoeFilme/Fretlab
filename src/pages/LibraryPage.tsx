@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ExternalLink, FileMusic, LayoutGrid, Link2, List, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileMusic, LayoutGrid, Link2, List, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, PageHeader, Segmented } from '../components/ui'
@@ -41,9 +41,35 @@ function useTrackScan(all: Song[] | undefined) {
   return pending.length
 }
 
+/** Músicas agrupadas por artista (A–Z), com as do mesmo artista em ordem de título. */
+function groupByArtist(songs: Song[]) {
+  const groups = new Map<string, Song[]>()
+  for (const s of sortSongs(songs, 'artist')) {
+    const a = s.artist.trim() || 'Artista desconhecido'
+    groups.set(a, [...(groups.get(a) ?? []), s])
+  }
+  return [...groups.entries()].map(([artist, songs]) => ({ artist, songs }))
+}
+
+/** Cabeçalho do grupo do artista (recolhível); sem artista, só mostra as músicas. */
+function ArtistGroup({ artist, count, children }: { artist: string | null; count: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true)
+  if (artist === null) return <>{children}</>
+  return (
+    <section className="mb-6">
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mb-3 flex w-full items-center gap-3 border-b border-wood-700 pb-2 text-left hover:text-enclosure">
+        <ChevronDown className={`size-5 transition-transform ${open ? '' : '-rotate-90'}`} aria-hidden />
+        <span className="font-display text-2xl font-black uppercase">{artist}</span>
+        <span className="font-mono text-sm text-pearl-faint">{count} {count === 1 ? 'música' : 'músicas'}</span>
+      </button>
+      {open && children}
+    </section>
+  )
+}
+
 const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 /** ordena a biblioteca: mais recentes, por título ou por artista (e título dentro do artista) */
-function sortSongs(songs: Song[], by: 'added' | 'title' | 'artist') {
+function sortSongs(songs: Song[], by: 'added' | 'title' | 'artist' | 'group') {
   const xs = [...songs]
   if (by === 'added') return xs.sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0))
   if (by === 'title') return xs.sort((a, b) => collator.compare(a.title, b.title))
@@ -128,7 +154,7 @@ export function LibraryPage() {
           ]}
         />
         {tab === 'musicas' && (
-          <Segmented<'added' | 'title' | 'artist'>
+          <Segmented<'added' | 'title' | 'artist' | 'group'>
             label="Ordenar"
             value={sortBy}
             onChange={(v) => setSettings({ librarySort: v })}
@@ -136,6 +162,7 @@ export function LibraryPage() {
               { value: 'added', label: 'Mais recentes' },
               { value: 'title', label: 'Música A–Z' },
               { value: 'artist', label: 'Artista A–Z' },
+              { value: 'group', label: 'Agrupar por artista' },
             ]}
           />
         )}
@@ -187,15 +214,19 @@ export function LibraryPage() {
               </button>
             </p>
           )}
-          {view === 'list' ? (
-            <ul className="panel overflow-hidden">
-              {songs?.map((s) => <SongItem key={s.id} song={s} list family={family} />)}
-            </ul>
-          ) : (
-            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
-              {songs?.map((s) => <SongItem key={s.id} song={s} list={false} family={family} />)}
-            </ul>
-          )}
+          {(sortBy === 'group' ? groupByArtist(songs ?? []) : [{ artist: null, songs: songs ?? [] }]).map((g) => (
+            <ArtistGroup key={g.artist ?? '*'} artist={g.artist} count={g.songs.length}>
+              {view === 'list' ? (
+                <ul className="panel overflow-hidden">
+                  {g.songs.map((s) => <SongItem key={s.id} song={s} list family={family} />)}
+                </ul>
+              ) : (
+                <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
+                  {g.songs.map((s) => <SongItem key={s.id} song={s} list={false} family={family} />)}
+                </ul>
+              )}
+            </ArtistGroup>
+          ))}
         </>
       )}
     </div>

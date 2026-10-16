@@ -17,7 +17,7 @@ interface Settings {
   /** volume geral do player, o mesmo para todas as músicas (fica o último usado) */
   playerVolume: number
   /** ordem da biblioteca */
-  librarySort: 'added' | 'title' | 'artist'
+  librarySort: 'added' | 'title' | 'artist' | 'group'
   /** áudio do player: sintetizador ou gravação do YouTube (vale para as próximas músicas) */
   playerSource: 'midi' | 'video'
   /** biblioteca em cards ou em linhas */
