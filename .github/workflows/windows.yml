@@ -1,11 +1,15 @@
 name: App para Windows
 
-# Gera o instalador do FretLab para Windows (.exe, NSIS) numa máquina Windows do GitHub.
-# Roda ao publicar uma tag de versão (v1.2.0…) ou à mão em Actions → "App para Windows" → Run workflow.
+# Gera o instalador do FretLab para Windows (.exe, NSIS) numa máquina Windows do GitHub e publica um
+# Release com o instalador assinado e o latest.json: o app instalado se atualiza sozinho a partir dele.
+# Roda ao publicar uma tag de versão (v1.3.0…) ou à mão em Actions → "App para Windows" → Run workflow.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   windows:
@@ -21,7 +25,20 @@ jobs:
         with:
           workspaces: src-tauri
       - run: npm ci
-      - run: npm run desktop:build:windows
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # assina o instalador (o app recusa atualizações sem esta assinatura)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tagName: v__VERSION__
+          releaseName: FretLab __VERSION__
+          releaseBody: 'Instalador do FretLab para Windows. Quem já tem o app instalado recebe esta versão sozinho ao abrir.'
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: --bundles nsis
       - uses: actions/upload-artifact@v4
         with:
           name: FretLab-Windows

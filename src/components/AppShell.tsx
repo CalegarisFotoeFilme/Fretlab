@@ -8,6 +8,7 @@ import { db } from '../progress/db'
 import { useSettings } from '../progress/settings'
 import { applyInstrumentVoice, resetVoices } from '../audio/sfVoice'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { UpdateBanner } from './UpdateBanner'
 
 /**
  * App para Mac: o que a janela do Songsterr baixar (Guitar Pro/MIDI) entra na biblioteca e abre.
@@ -73,6 +74,7 @@ export function AppShell() {
   const immersive = pathname.startsWith('/licao/')
   return (
     <div className="min-h-dvh md:flex">
+      <UpdateBanner />
       {!immersive && (
         <nav
           aria-label="Principal"

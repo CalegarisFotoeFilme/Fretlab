@@ -21,7 +21,9 @@
     "allow-read-saved-song",
     "allow-songsterr-go",
     "allow-songsterr-eval",
-    "log:default"
+    "log:default",
+    "updater:default",
+    "process:allow-restart"
   ],
   "remote": {
     "urls": [
