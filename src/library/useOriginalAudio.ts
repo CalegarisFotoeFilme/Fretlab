@@ -1,3 +1,4 @@
+import { useSettings } from '../progress/settings'
 import type * as AT from '@coderline/alphatab'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { applySoundFont } from './alphatab'
@@ -159,6 +160,8 @@ export function useOriginalAudio(
       const output = api.player?.output as AT.synth.IExternalMediaSynthOutput | undefined
       if (!output) throw new Error('O player da tab não aceitou mídia externa.')
       attachExternalMedia(output, player, YT.PlayerState.PLAYING, guard)
+      // o vídeo começa no volume do YouTube: passa a usar o volume geral salvo do player
+      safe(() => player.setVolume(useSettings.getState().playerVolume * 100), undefined)
       // o vídeo é o relógio: a tab segue o tempo dele
       // o YouTube informa o tempo em degraus: entre leituras iguais, avança pelo relógio (cursor sem piscar)
       let lastYt = -1

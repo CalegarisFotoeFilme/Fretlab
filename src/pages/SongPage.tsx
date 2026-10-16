@@ -67,6 +67,14 @@ function SongView() {
     if (song?.id) void updateSong(song.id, { sync })
   })
   const videoOn = original.state.status === 'on' || original.state.status === 'loading'
+  // o volume salvo vale para a fonte que estiver tocando: ao ligar a gravação (o YouTube começa em
+  // 100%) ou voltar ao sintetizador (recriado), aplica de novo
+  const sourceStatus = original.state.status
+  useEffect(() => {
+    if (sourceStatus !== 'on' && sourceStatus !== 'off') return
+    const api = apiRef.current
+    if (api) api.masterVolume = useSettings.getState().playerVolume
+  }, [sourceStatus])
   // sintetizador ou gravação: a escolha vale para as próximas músicas
   const setSettings = useSettings((s) => s.set)
   const chooseSource = (v: 'midi' | 'video') => {
