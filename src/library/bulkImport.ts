@@ -41,6 +41,8 @@ const set = (patch: Partial<BulkState>) => useBulkImport.setState(patch)
 const PAUSE_MS = 3000
 const SONG_TIMEOUT_MS = 75000
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+/** registro no log do app (~/Library/Logs/br.fretlab.desktop), para diagnosticar */
+const log = (msg: string) => void import('@tauri-apps/plugin-log').then((l) => l.info(msg)).catch(() => {})
 
 // ---------- conversa com a página do Songsterr ----------
 
@@ -77,16 +79,36 @@ const FAVORITES_SCRIPT = `
   __report({ type: 'favorites', songs: list.map((s) => ({ id: s.songId ?? s.id, title: s.title ?? '', artist: s.artist ?? s.artistName ?? '' })) })
 `
 
-/** Espera a página da música carregar e clica em Download → Guitar Pro. */
+/**
+ * Espera a página da música carregar e clica em Download → Guitar Pro, como o usuário faz: expande o
+ * painel do player (`#controls-panel-handle`), clica em Download (`#c-export` é a caixa; o clique vai
+ * no <button> de dentro) e escolhe Guitar Pro (`#control-export-gp`).
+ */
 const downloadScript = (songId: number) => `
   const wait = async (test, ms) => { const t = Date.now(); while (Date.now() - t < ms) { const v = test(); if (v) return v; await new Promise((r) => setTimeout(r, 300)) } return null }
+  const btnIn = (sel) => { const el = document.querySelector(sel); if (!el) return null; return el.tagName === 'BUTTON' ? el : el.querySelector('button, [role="button"]') || el }
   const onPage = await wait(() => /-s${songId}(?:t\\d+)?$/.test(location.pathname), 30000)
-  if (!onPage) return __report({ type: 'click', ok: false, reason: 'a página da música não abriu' })
-  const btn = await wait(() => document.querySelector('#c-export'), 30000)
+  if (!onPage) return __report({ type: 'click', ok: false, reason: 'a página da música não abriu (' + location.pathname + ')' })
+  const handle = () => document.querySelector('#controls-panel-handle')
+  let btn = await wait(() => btnIn('#c-export'), 15000)
+  // painel recolhido (janela estreita): expande pela alça do painel de controles
+  if (!btn && handle()) {
+    handle().click()
+    btn = await wait(() => btnIn('#c-export'), 8000)
+  }
   if (!btn) return __report({ type: 'click', ok: false, reason: 'botão de download não apareceu' })
   btn.click()
-  const gp = await wait(() => document.querySelector('#control-export-gp'), 15000)
-  if (!gp) return __report({ type: 'click', ok: false, reason: 'opção Guitar Pro não apareceu (sem Plus?)' })
+  let gp = await wait(() => btnIn('#control-export-gp'), 5000)
+  if (!gp && handle()) {
+    // o botão existia mas o painel estava fechado: abre o painel e clica de novo
+    handle().click()
+    await new Promise((r) => setTimeout(r, 800))
+    const again = btnIn('#c-export')
+    if (again) again.click()
+    gp = await wait(() => btnIn('#control-export-gp'), 10000)
+  }
+  if (!gp) return __report({ type: 'click', ok: false, reason: 'opção Guitar Pro não apareceu (menu de download: ' + !!document.querySelector('#download-formats, #download_modal') + ')' })
+  if (gp.disabled) return __report({ type: 'click', ok: false, reason: 'opção Guitar Pro desativada' })
   gp.click()
   __report({ type: 'click', ok: true })
 `
@@ -148,6 +170,7 @@ export async function startBulkImport() {
       const click = await ask(downloadScript(s.id), 70000)
       if (!click?.ok) {
         onImported = null
+        log(`favoritos: falhou ${s.title} (${s.id}): ${(click?.reason as string) ?? 'sem resposta da página'}`)
         set({ failed: [...useBulkImport.getState().failed, `${s.title} (${(click?.reason as string) ?? 'sem resposta'})`] })
         continue
       }
