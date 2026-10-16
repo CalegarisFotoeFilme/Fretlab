@@ -1,5 +1,6 @@
 import { midiAt, stringNumber, type FretPos, type Instrument } from '../theory/instrument'
 import { SCALES, mod12 } from '../theory/notes'
+import { SLAP_GROOVES, slapSteps, type Step } from './slap'
 import { CAGED_SHAPES, arpeggio, cagedShape, cagedStart, fitNeck, fretOn, scaleByString, upAndDown, type Drill } from './drills'
 
 /*
@@ -15,7 +16,7 @@ export interface Challenge {
   /** o que esse desafio faz você internalizar */
   goal: string
   root: number
-  seq: FretPos[]
+  seq: Step[]
   /** notas por clique do metrônomo */
   perBeat: number
   /** trechos do desafio (ex.: cada caixa), para estudar um de cada vez: [início, fim) em `seq` */
@@ -182,8 +183,29 @@ export function makeChallenge(inst: Instrument, drill: Drill, name: NameFn, rng:
       const prog = PROGRESSIONS[0]
       return { kind, root, perBeat: drill.perBeat, title: `Arpejos de I, IV e V em ${name(root)}`, goal: 'Passar o arpejo pelos acordes de uma progressão liga o desenho à harmonia: é assim que se toca "em cima" dos acordes.', seq: prog.chords.flatMap(([d]) => chordTones(inst, mod12(root + d), 'maj', 0)) }
     }
-    case 'oitavas':
     case 'slap': {
+      const low = n > 4 ? 1 : 0
+      const kinds = ['groove', 'i-iv', 'progressao'].filter((k) => k !== avoid)
+      const kind = pick(kinds, rng)
+      const gi = Math.floor(rng() * SLAP_GROOVES.length)
+      const g = SLAP_GROOVES[gi]
+      if (kind === 'groove') {
+        return { kind, root, perBeat: 4, title: `Slap groove "${g.name}" em ${name(root)}`, goal: `${g.about} Tom novo: a mão acha a tônica, o resto do desenho vem junto.`, seq: fitNeck(inst, slapSteps(inst, g.bar, root, low)) }
+      }
+      const prog = kind === 'i-iv' ? { name: 'I–IV', degrees: [0, 5] } : pick([{ name: 'I–IV–V–I', degrees: [0, 5, 7, 0] }, { name: 'I–bVII–IV–I', degrees: [0, 10, 5, 0] }, { name: 'i–bVI–bVII–i', degrees: [0, 8, 10, 0] }], rng)
+      const bars = prog.degrees.map((d) => fitNeck(inst, slapSteps(inst, g.bar, root, low, d)))
+      return {
+        kind, root, perBeat: 4,
+        title: `"${g.name}" na progressão ${prog.name} em ${name(root)}`,
+        goal: 'A mesma levada mudando de acorde a cada compasso: o desenho da mão não muda, só a casa da tônica. É assim que um groove acompanha a harmonia.',
+        seq: bars.flat(),
+        parts: bars.map((b, i) => {
+          const start = bars.slice(0, i).reduce((t, x) => t + x.length, 0)
+          return { label: `Compasso ${i + 1}: ${name(mod12(root + prog.degrees[i]))}`, tag: String(i + 1), start, end: start + b.length }
+        }),
+      }
+    }
+    case 'oitavas': {
       const low = Math.floor(rng() * Math.min(2, n - 2))
       const high = low + 2
       const shift = 12 - (inst.openMidi[high] - inst.openMidi[low])

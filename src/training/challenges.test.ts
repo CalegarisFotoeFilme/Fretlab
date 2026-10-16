@@ -52,3 +52,22 @@ describe('CAGED', () => {
         }
   })
 })
+
+describe('slap groove', () => {
+  it('cada levada tem 16 semicolcheias, pop duas cordas acima e ghost notes sem altura', async () => {
+    const { SLAP_GROOVES, slapSteps } = await import('./slap')
+    for (const inst of instruments.filter((i) => i.kind !== 'guitar6'))
+      for (const g of SLAP_GROOVES)
+        for (let root = 0; root < 12; root++) {
+          const steps = slapSteps(inst, g.bar, root, inst.openMidi.length > 4 ? 1 : 0)
+          expect(steps, g.name).toHaveLength(16)
+          const low = steps.find((s) => s.mark === 'T')!.string
+          for (const s of steps) {
+            if (s.mark === 'P') expect(s.string).toBe(low + 2)
+            expect(s.fret).toBeGreaterThanOrEqual(1)
+          }
+          // a primeira nota é a tônica
+          expect(mod12(midiAt(inst, steps[0]))).toBe(root)
+        }
+  })
+})

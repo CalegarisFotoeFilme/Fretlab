@@ -1,4 +1,5 @@
 import { midiAt, type FretPos, type Instrument, type InstrumentKind } from '../theory/instrument'
+import { SLAP_GROOVES, slapSteps, type Step } from './slap'
 import { SCALES, mod12 } from '../theory/notes'
 
 /*
@@ -153,14 +154,14 @@ export const DRILLS: Drill[] = [
   },
   {
     id: 'slap',
-    title: 'Slap em oitavas',
-    focus: 'thumb e pop no groove I–IV–V',
-    why: 'A oitava é o desenho básico do slap: polegar na nota grave, pop na oitava. Passar o desenho pelos acordes I, IV e V do tom treina a mão direita e, ao mesmo tempo, a progressão mais comum do blues e do funk.',
-    how: 'Para cada acorde: T (polegar) na fundamental, P (pop) na oitava, T, P. Abafe tudo entre os ataques; a mão esquerda solta a pressão logo depois de cada nota.',
+    title: 'Slap groove',
+    focus: 'polegar, pop, ghost notes e hammer-ons em levadas de funk-rock',
+    why: 'Slap não é só oitava: é groove. Estas levadas (originais, no espírito do funk-rock de baixistas como Flea) juntam polegar e pop, ghost notes preenchendo as semicolcheias, pausas que dão balanço, hammer-ons e frases da pentatônica. Cada levada ensina uma peça; juntas, viram vocabulário para criar as suas.',
+    how: 'Semicolcheias contínuas: T = polegar, P = pop (duas cordas acima), H = hammer-on sem novo ataque, x = ghost note (corda abafada pela mão esquerda), pausa = abafe tudo. A mão direita nunca para; quem decide se a nota soa é a esquerda.',
     perBeat: 4,
     startBpm: 60,
-    positions: 2,
-    positionLabel: (i) => (i === 0 ? 'fundamental na corda mais grave' : 'fundamental na 2ª corda'),
+    positions: SLAP_GROOVES.length,
+    positionLabel: (i) => SLAP_GROOVES[i].name,
     usesKey: true,
     lesson: 'w10-slap',
     instrument: 'bass',
@@ -249,7 +250,7 @@ export const upAndDown = (up: FretPos[]) => [...up, ...up.slice(0, -1).reverse()
 /** Acima desta casa, se o desenho couber uma oitava abaixo, ele é mostrado lá (região mais confortável). */
 const COMFORT = 15
 
-export function fitNeck(inst: Instrument, ps: FretPos[]) {
+export function fitNeck<T extends FretPos>(inst: Instrument, ps: T[]): T[] {
   const max = Math.max(...ps.map((p) => p.fret))
   if (max <= Math.min(COMFORT, inst.frets)) return ps
   const lowered = ps.map((p) => ({ ...p, fret: p.fret - 12 }))
@@ -289,7 +290,7 @@ export function arpeggio(inst: Instrument, root: number, string: number, third: 
 }
 
 /** Sequência de posições (na ordem de tocar) do exercício, para o instrumento, o tom e a posição. */
-export function drillSequence(inst: Instrument, drill: Drill, root: number, position = 0): FretPos[] {
+export function drillSequence(inst: Instrument, drill: Drill, root: number, position = 0): Step[] {
   const n = inst.openMidi.length
   const pos = ((position % drill.positions) + drill.positions) % drill.positions
   switch (drill.id) {
@@ -323,14 +324,9 @@ export function drillSequence(inst: Instrument, drill: Drill, root: number, posi
     }
     case 'caged':
       return upAndDown(cagedShape(inst, root, pos))
-    case 'slap': {
-      const low = Math.min(pos, n - 3)
-      const high = low + 2
-      const shift = 12 - (inst.openMidi[high] - inst.openMidi[low])
-      const r = fretOn(inst, low, root, 1)
-      // I, IV e V na mesma corda: T-P-T-P em cada um
-      return fitNeck(inst, [0, 5, 7, 0].flatMap((d) => [0, 1, 2, 3].map((k) => (k % 2 ? { string: high, fret: r + d + shift } : { string: low, fret: r + d }))))
-    }
+    case 'slap':
+      // levada na corda mais grave (no baixo de 5 e 6, a corda E, como no de 4)
+      return fitNeck(inst, slapSteps(inst, SLAP_GROOVES[pos].bar, root, n > 4 ? 1 : 0))
     case 'walking':
       // 1-3-5-b7 de I7, IV7, V7 e I7, cada um na forma com a fundamental na corda escolhida
       return fitNeck(inst, [0, 5, 7, 0].flatMap((d) => arpeggio(inst, mod12(root + d), pos, 4, [10]).slice(0, 4)))
@@ -352,7 +348,9 @@ const UP_DOWN = new Set(['aranha', 'pentatonica', 'maior', 'arpejos', 'legato', 
  * Sentido do exercício: só subindo, só descendo ou os dois. Nos que já sobem e descem, corta no
  * ponto mais agudo; nos outros (oitavas, slap, walking), "desce" é a sequência de trás para frente.
  */
-export function withDirection(inst: Instrument, drill: Drill, seq: FretPos[], dir: Direction): FretPos[] {
+export function withDirection(inst: Instrument, drill: Drill, seq: Step[], dir: Direction): Step[] {
+  // groove é groove: tocado como está escrito
+  if (drill.id === 'slap') return seq
   if (dir === 'both' && UP_DOWN.has(drill.id)) return seq
   if (!UP_DOWN.has(drill.id)) {
     const back = [...seq].reverse()

@@ -3,7 +3,7 @@ import { Hint } from '../exercises/Hint'
 import { Check, ChevronDown, ChevronUp, Dumbbell, Play, RotateCcw, Shuffle, Square, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { audioCtx, playNote, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
+import { audioCtx, playNote, silenceNotes, startMetronome, uiSound, type MetronomeHandle } from '../audio/engine'
 import { Fretboard, type Marker } from '../components/Fretboard'
 import { Button, Meter, PageHeader, Segmented } from '../components/ui'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
@@ -12,12 +12,13 @@ import type { Lesson } from '../curriculum/types'
 import { ExerciseView } from '../exercises/ExerciseView'
 import { dueFacts } from '../progress/facts'
 import { makeChallenge, type Challenge } from '../training/challenges'
+import type { Step } from '../training/slap'
 import { IntervalEar } from '../training/IntervalEar'
 import { EchoTrainer } from '../training/EchoTrainer'
 import { db } from '../progress/db'
 import { recordAttempt, recordDrill, useProgress } from '../progress/progress'
 import { useInstrument, useNoteName, useSettings } from '../progress/settings'
-import { midiAt, type FretPos, type Instrument } from '../theory/instrument'
+import { midiAt, type Instrument } from '../theory/instrument'
 import { mod12, prefersFlats } from '../theory/notes'
 import { DRILLS, drillOfDay, drillsFor, withDirection, type Direction, drillSequence, dueReviews, keyOfDay, positionOfDay } from '../training/drills'
 
@@ -251,7 +252,14 @@ function DrillPanel() {
     const m = startMetronome(target, 4, (b) => setBeat(b % 4), { totalBeats: beats + 4 })
     const lead = (m.startTime - audioCtx().currentTime) * 1000 + 4 * spb * 1000
     // como num instrumento: cada nota corta a anterior; a última decai sozinha
-    const timers = playSeq.map((p, i) => window.setTimeout(() => playNote(midiAt(inst, p), 0, 0.6, false, i < playSeq.length - 1 ? gap : undefined), lead + i * gap * 1000))
+    const timers = playSeq.map((p, i) =>
+      window.setTimeout(() => {
+        if (p.rest) return silenceNotes()
+        // ghost note: um "tuc" curto e baixo (corda abafada); notas: cortam a anterior, a última decai
+        if (p.ghost) return playNote(midiAt(inst, p), 0, 0.22, false, 0.035)
+        playNote(midiAt(inst, p), 0, 0.6, false, i < playSeq.length - 1 ? gap : undefined)
+      }, lead + i * gap * 1000),
+    )
     timers.push(window.setTimeout(() => stopPreview(), lead + beats * spb * 1000 + 200))
     preview.current = { timers, metro: m }
     setListening(true)
@@ -274,16 +282,19 @@ function DrillPanel() {
   // no desafio inteiro em caixas, cada nota mostra o número da caixa
   const order = new Map<string, string>()
   const shown = focus ? playSeq : seq
+  let num = 0
   shown.forEach((p, i) => {
+    if (p.ghost || p.rest) return
+    num++
     const k = `${p.string}:${p.fret}`
     if (order.has(k)) return
     const owner = !focus && challenge?.parts?.find((pt) => i >= pt.start && i < pt.end)
-    order.set(k, owner ? owner.tag : String(i + 1))
+    order.set(k, owner ? owner.tag : String(num))
   })
   const isRootAt = (string: number, fret: number) => drill.usesKey && mod12(midiAt(inst, { string, fret }) - keyPc) === 0
   const markers: Marker[] = [
     ...(focus
-      ? seq.filter((p) => !order.has(`${p.string}:${p.fret}`)).map((p) => ({ string: p.string, fret: p.fret, tone: 'ghost' as const, label: '' }))
+      ? seq.filter((p) => !p.ghost && !p.rest && !order.has(`${p.string}:${p.fret}`)).map((p) => ({ string: p.string, fret: p.fret, tone: 'ghost' as const, label: '' }))
       : []),
     ...[...order.entries()].map(([k, label]) => {
       const [string, fret] = k.split(':').map(Number)
@@ -325,7 +336,7 @@ function DrillPanel() {
                   </button>
                 ))}
                 <button role="radio" aria-checked={part === null} onClick={() => setPart(null)} className={`rounded-lg px-3 py-1.5 text-left text-sm ${part === null ? 'bg-wood-700 text-pearl font-semibold' : 'text-pearl-dim hover:bg-wood-800'}`}>
-                  Tudo junto (o número em cada nota é a caixa)
+                  Tudo junto (o número em cada nota é o trecho)
                 </button>
               </div>
             )}
@@ -491,17 +502,17 @@ function DrillPanel() {
  * Tablatura desenhada (SVG) da sequência: um compasso de 4 tempos por bloco, as notas de cada tempo
  * agrupadas e as cordas com o nome, como numa tab de verdade.
  */
-function TabView({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; perBeat: number }) {
+function TabView({ inst, seq, perBeat }: { inst: Instrument; seq: Step[]; perBeat: number }) {
   const noteName = useNoteName()
   const perBar = perBeat * 4
-  const bars: FretPos[][] = []
+  const bars: Step[][] = []
   for (let i = 0; i < seq.length; i += perBar) bars.push(seq.slice(i, i + perBar))
   const n = inst.openMidi.length
   const GAP = 13 // distância entre cordas
   const CELL = 22
   const BEAT_GAP = 10
   const PAD = 30
-  const height = GAP * (n - 1) + 24
+  const height = GAP * (n - 1) + 24 + (seq.some((p) => p.mark && !p.ghost) ? 8 : 0)
   // largura fixa (a de um compasso de semicolcheias) para todo exercício ter o mesmo tamanho na tela;
   // as notas se espalham dentro de cada tempo conforme quantas cabem nele
   const beatW = 4 * CELL + BEAT_GAP
@@ -523,14 +534,22 @@ function TabView({ inst, seq, perBeat }: { inst: Instrument; seq: FretPos[]; per
             ))}
             <line x1={20} x2={20} y1={yOf(n - 1)} y2={yOf(0)} stroke="var(--color-pearl-faint)" strokeWidth={1.5} />
             <line x1={width - 4} x2={width - 4} y1={yOf(n - 1)} y2={yOf(0)} stroke="var(--color-pearl-faint)" strokeWidth={1.5} />
-            {bar.map((p, i) => (
-              <g key={i}>
-                <rect x={xOf(i) - 8} y={yOf(p.string) - 7} width={16} height={14} rx={3} fill="var(--color-wood-900)" />
-                <text x={xOf(i)} y={yOf(p.string) + 4} textAnchor="middle" fontSize={12} fontWeight={700} fontFamily="var(--font-mono)" fill="var(--color-pearl)">
-                  {p.fret}
-                </text>
-              </g>
-            ))}
+            {bar.map((p, i) =>
+              p.rest ? null : (
+                <g key={i}>
+                  <rect x={xOf(i) - 8} y={yOf(p.string) - 7} width={16} height={14} rx={3} fill="var(--color-wood-900)" />
+                  <text x={xOf(i)} y={yOf(p.string) + 4} textAnchor="middle" fontSize={12} fontWeight={700} fontFamily="var(--font-mono)" fill={p.ghost ? 'var(--color-pearl-faint)' : 'var(--color-pearl)'}>
+                    {p.ghost ? 'x' : p.fret}
+                  </text>
+                  {/* técnica (T, P, H) embaixo da tablatura */}
+                  {p.mark && !p.ghost && (
+                    <text x={xOf(i)} y={height - 1} textAnchor="middle" fontSize={8} fontWeight={700} fontFamily="var(--font-mono)" fill="var(--color-enclosure)">
+                      {p.mark}
+                    </text>
+                  )}
+                </g>
+              ),
+            )}
           </svg>
           <figcaption className="px-2 font-mono text-[10px] text-pearl-faint">compasso {bi + 1}</figcaption>
         </figure>
