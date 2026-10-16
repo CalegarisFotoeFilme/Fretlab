@@ -1,6 +1,6 @@
 import { CloudDownload, Square } from 'lucide-react'
 import { Button } from '../components/ui'
-import { startBulkImport, stopBulkImport, useBulkImport } from './bulkImport'
+import { DAILY_LIMIT, dailyLeft, startBulkImport, stopBulkImport, useBulkImport } from './bulkImport'
 
 /** Botão de "Importar meus favoritos do Songsterr" (app para Mac). */
 export function BulkImportButton() {
@@ -59,7 +59,11 @@ export function BulkImportPanel() {
           </ul>
         </details>
       )}
-      {busy && <p className="text-xs text-pearl-faint">Deixe a janela do Songsterr aberta. Uma música por vez, com pausa entre elas.</p>}
+      {busy && (
+        <p className="text-xs text-pearl-faint">
+          Deixe a janela do Songsterr aberta. Uma música por vez, com pausa entre elas. O Songsterr permite 200 downloads por dia: a importação para em {DAILY_LIMIT} (ainda cabem {dailyLeft()} hoje) e continua amanhã de onde parou.
+        </p>
+      )}
     </section>
   )
 }

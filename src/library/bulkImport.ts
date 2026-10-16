@@ -39,6 +39,28 @@ export const useBulkImport = create<BulkState>(() => ({
 const set = (patch: Partial<BulkState>) => useBulkImport.setState(patch)
 
 const PAUSE_MS = 3000
+/** o Songsterr limita os downloads a 200 por dia; para um pouco antes, com folga para os manuais */
+export const DAILY_LIMIT = 190
+
+// downloads feitos hoje pela importação (lembrado neste aparelho)
+const today = () => new Date().toLocaleDateString('sv')
+function readDaily(): number {
+  try {
+    const v = JSON.parse(localStorage.getItem('fretlab.songsterr.daily') ?? 'null')
+    return v?.day === today() ? v.count : 0
+  } catch {
+    return 0
+  }
+}
+function bumpDaily() {
+  try {
+    localStorage.setItem('fretlab.songsterr.daily', JSON.stringify({ day: today(), count: readDaily() + 1 }))
+  } catch {
+    // sem armazenamento local: só não conta
+  }
+}
+/** quantos downloads ainda cabem hoje */
+export const dailyLeft = () => Math.max(0, DAILY_LIMIT - readDaily())
 const SONG_TIMEOUT_MS = 75000
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /** registro no log do app (~/Library/Logs/br.fretlab.desktop), para diagnosticar */
@@ -146,6 +168,9 @@ export async function startBulkImport() {
 
     for (let i = 0; i < songs.length; i++) {
       if (stopRequested) return set({ status: 'stopped', current: null, message: 'Importação interrompida.' })
+      if (dailyLeft() === 0) {
+        return set({ status: 'stopped', current: null, message: `Limite diário do Songsterr (200 downloads por dia): a importação parou em ${DAILY_LIMIT} hoje. Amanhã é só clicar de novo em "Importar meus favoritos": as que já estão aqui são puladas.` })
+      }
       const s = songs[i]
       set({ index: i, current: s })
       // já está na biblioteca (link da mesma música): pula
@@ -191,6 +216,7 @@ export async function startBulkImport() {
         }
       }
       await updateSong(id, patch)
+      bumpDaily()
       set({ imported: useBulkImport.getState().imported + 1 })
       await sleep(PAUSE_MS)
     }
