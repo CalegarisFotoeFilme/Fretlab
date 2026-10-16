@@ -51,9 +51,9 @@ function groupByArtist(songs: Song[]) {
   return [...groups.entries()].map(([artist, songs]) => ({ artist, songs }))
 }
 
-/** Cabeçalho do grupo do artista (recolhível); sem artista, só mostra as músicas. */
+/** Cabeçalho do grupo do artista (começa recolhido, para achar o artista rápido); sem artista, só mostra as músicas. */
 function ArtistGroup({ artist, count, children }: { artist: string | null; count: number; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   if (artist === null) return <>{children}</>
   return (
     <section className="mb-6">
