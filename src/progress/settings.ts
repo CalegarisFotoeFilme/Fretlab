@@ -22,6 +22,9 @@ interface Settings {
   playerSource: 'midi' | 'video'
   /** biblioteca em cards ou em linhas */
   libraryView: 'cards' | 'list'
+  /** filtros da biblioteca: instrumento e afinação (null = qualquer) */
+  libraryInstrument: 'any' | 'bass' | 'guitar'
+  libraryTuning: string | null
   set: (patch: Partial<Omit<Settings, 'set'>>) => void
 }
 
@@ -40,6 +43,8 @@ export const useSettings = create<Settings>()(
       librarySort: 'added',
       playerSource: 'midi',
       libraryView: 'cards',
+      libraryInstrument: 'any',
+      libraryTuning: null,
       set: (patch) => set(patch),
     }),
     { name: 'fretlab-settings' },

@@ -1,10 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ExternalLink, FileMusic, LayoutGrid, Link2, List, Pencil, Plus, Trash2, Upload } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, PageHeader, Segmented } from '../components/ui'
 import { Kbd } from '../components/useHotkeys'
 import { Playlists } from '../library/Playlists'
+import { readTracksMeta, songTunings } from '../library/songMeta'
 import { BulkImportButton, BulkImportPanel } from '../library/BulkImportPanel'
 import { useSettings } from '../progress/settings'
 import { updateSong } from '../progress/songs'
@@ -13,6 +14,30 @@ import { isDesktop } from '../library/desktop'
 import { GP_ACCEPT, songFromFile } from '../library/importSong'
 import { db, type Song } from '../progress/db'
 
+
+/** Lê, em segundo plano, as faixas e afinações das músicas que ainda não têm (uma por vez). */
+function useTrackScan(all: Song[] | undefined) {
+  const pending = all?.filter((s) => s.file && !s.tracks).map((s) => s.id!) ?? []
+  const key = pending.join(',')
+  useEffect(() => {
+    if (!key) return
+    let cancelled = false
+    void (async () => {
+      for (const id of key.split(',').map(Number)) {
+        if (cancelled) return
+        const song = await db.songs.get(id)
+        if (!song?.file || song.tracks) continue
+        // arquivo ilegível: lista vazia (não tenta de novo a cada visita)
+        const tracks = await readTracksMeta(song).catch(() => [])
+        if (!cancelled) await updateSong(id, { tracks })
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [key])
+  return pending.length
+}
 
 const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 /** ordena a biblioteca: mais recentes, por título ou por artista (e título dentro do artista) */
@@ -28,7 +53,18 @@ export function LibraryPage() {
   const sortBy = useSettings((s) => s.librarySort)
   const view = useSettings((s) => s.libraryView)
   const setSettings = useSettings((s) => s.set)
-  const songs = all && sortSongs(all, sortBy)
+  // filtros: instrumento e afinação (só as afinações que existem nas músicas da biblioteca)
+  const instFilter = useSettings((s) => s.libraryInstrument)
+  const tuningPick = useSettings((s) => s.libraryTuning)
+  const userFamily = useSettings((s) => (s.instrument === 'guitar6' ? 'guitar' : 'bass'))
+  const family = instFilter === 'any' ? userFamily : instFilter
+  const ofInstrument = all?.filter((s) => instFilter === 'any' || s.tracks?.some((t) => t.family === instFilter)) ?? []
+  const tuningCounts = new Map<string, number>()
+  if (instFilter !== 'any') for (const s of ofInstrument) for (const t of songTunings(s, instFilter)) tuningCounts.set(t, (tuningCounts.get(t) ?? 0) + 1)
+  const tuningFilter = tuningPick && tuningCounts.has(tuningPick) ? tuningPick : null
+  const filtered = instFilter !== 'any' && tuningFilter ? ofInstrument.filter((s) => songTunings(s, instFilter).includes(tuningFilter)) : ofInstrument
+  const songs = all && sortSongs(filtered, sortBy)
+  const scanning = useTrackScan(all)
   const [tab, setTab] = useState<'musicas' | 'repertorios'>('musicas')
   const [adding, setAdding] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
@@ -102,6 +138,34 @@ export function LibraryPage() {
           />
         )}
         {tab === 'musicas' && (
+          <Segmented<'any' | 'bass' | 'guitar'>
+            label="Instrumento"
+            value={instFilter}
+            onChange={(v) => setSettings({ libraryInstrument: v, libraryTuning: null })}
+            options={[
+              { value: 'any', label: 'Qualquer instrumento' },
+              { value: 'bass', label: 'Baixo' },
+              { value: 'guitar', label: 'Guitarra' },
+            ]}
+          />
+        )}
+        {tab === 'musicas' && instFilter !== 'any' && (
+          <select
+            value={tuningFilter ?? ''}
+            onChange={(e) => setSettings({ libraryTuning: e.target.value || null })}
+            aria-label="Afinação"
+            className="min-h-11 rounded-xl bg-wood-950 border border-wood-700 px-3 text-pearl focus:border-enclosure outline-none"
+          >
+            <option value="">Qualquer afinação ({ofInstrument.length})</option>
+            {[...tuningCounts.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
+              <option key={t} value={t}>
+                {t} ({n})
+              </option>
+            ))}
+          </select>
+        )}
+        {tab === 'musicas' && scanning > 0 && <span className="text-sm text-pearl-faint">Lendo afinações… faltam {scanning}</span>}
+        {tab === 'musicas' && (
           <Button variant="ghost" className="ml-auto" onClick={() => setSettings({ libraryView: view === 'list' ? 'cards' : 'list' })} title={view === 'list' ? 'Ver em cards' : 'Ver em lista'}>
             {view === 'list' ? <LayoutGrid className="size-4" aria-hidden /> : <List className="size-4" aria-hidden />} {view === 'list' ? 'Cards' : 'Lista'}
           </Button>
@@ -112,14 +176,22 @@ export function LibraryPage() {
         <Playlists songs={all ?? []} />
       ) : (
         <>
-          {songs && songs.length === 0 && !adding && <EmptyState />}
+          {all && all.length === 0 && !adding && <EmptyState />}
+          {all && all.length > 0 && songs?.length === 0 && (
+            <p className="panel p-4 text-pearl-dim">
+              Nenhuma música com esse filtro.{' '}
+              <button className="text-enclosure underline" onClick={() => setSettings({ libraryInstrument: 'any', libraryTuning: null })}>
+                Mostrar todas
+              </button>
+            </p>
+          )}
           {view === 'list' ? (
             <ul className="panel overflow-hidden">
-              {songs?.map((s) => <SongItem key={s.id} song={s} list />)}
+              {songs?.map((s) => <SongItem key={s.id} song={s} list family={family} />)}
             </ul>
           ) : (
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
-              {songs?.map((s) => <SongItem key={s.id} song={s} list={false} />)}
+              {songs?.map((s) => <SongItem key={s.id} song={s} list={false} family={family} />)}
             </ul>
           )}
         </>
@@ -131,7 +203,8 @@ export function LibraryPage() {
 const ORIGIN = (s: Song) => (s.origin === 'midi' ? 'MIDI → tab' : s.origin === 'musicxml' ? 'MusicXML' : 'Guitar Pro')
 
 /** Uma música da biblioteca, em card ou em linha. Editar (lápis) também permite trocar o arquivo. */
-function SongItem({ song, list }: { song: Song; list: boolean }) {
+function SongItem({ song, list, family }: { song: Song; list: boolean; family: 'bass' | 'guitar' }) {
+  const tunings = songTunings(song, family)
   // confirmação na própria página (diálogos do navegador nem sempre aparecem)
   const [confirming, setConfirming] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -181,6 +254,7 @@ function SongItem({ song, list }: { song: Song; list: boolean }) {
           {song.file && <span className="eyebrow">{ORIGIN(song)}</span>}
           {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
         </span>
+        <span className="hidden md:block w-40 truncate text-sm text-enclosure" title={`Afinação (${family === 'bass' ? 'baixo' : 'guitarra'})`}>{tunings.join(' / ')}</span>
         <span className="flex items-center gap-2">
           {songsterr}
           {attach}
@@ -199,6 +273,7 @@ function SongItem({ song, list }: { song: Song; list: boolean }) {
           <div className="mt-1 flex gap-3">
             {song.file && <span className="eyebrow">{ORIGIN(song)}</span>}
             {song.songsterrUrl && <span className="eyebrow">Songsterr</span>}
+            {tunings.length > 0 && <span className="eyebrow text-enclosure" title={`Afinação (${family === 'bass' ? 'baixo' : 'guitarra'})`}>{tunings.join(' / ')}</span>}
           </div>
         </div>
         {actions}

@@ -111,12 +111,12 @@ export async function exportLibrary() {
       return { ...rest, ref: id, file: file ? await toBase64(file) : undefined }
     }),
   )
-  const { librarySort, playerVolume, libraryView, playerSource } = useSettings.getState()
+  const { librarySort, playerVolume, libraryView, playerSource, libraryInstrument, libraryTuning } = useSettings.getState()
   return JSON.stringify({
     app: 'fretlab', kind: 'library', version: 2, exportedAt: new Date().toISOString(),
     songs: library,
     playlists: playlists.map(({ name, songIds, createdAt }) => ({ name, songRefs: songIds, createdAt })),
-    settings: { librarySort, playerVolume, libraryView, playerSource },
+    settings: { librarySort, playerVolume, libraryView, playerSource, libraryInstrument, libraryTuning },
   })
 }
 
@@ -163,8 +163,10 @@ export async function importBackup(json: string) {
       done.push(`${data.playlists.length} ${data.playlists.length === 1 ? 'repertório' : 'repertórios'}`)
     }
     if (data.settings) {
-      const { librarySort, playerVolume, libraryView, playerSource } = data.settings
+      const { librarySort, playerVolume, libraryView, playerSource, libraryInstrument, libraryTuning } = data.settings
       useSettings.getState().set({
+        ...(['any', 'bass', 'guitar'].includes(libraryInstrument) ? { libraryInstrument } : {}),
+        ...(libraryTuning === null || typeof libraryTuning === 'string' ? { libraryTuning: libraryTuning ?? null } : {}),
         ...(['cards', 'list'].includes(libraryView) ? { libraryView } : {}),
         ...(['midi', 'video'].includes(playerSource) ? { playerSource } : {}),
         ...(['added', 'title', 'artist'].includes(librarySort) ? { librarySort } : {}),

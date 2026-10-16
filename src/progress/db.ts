@@ -26,6 +26,8 @@ export interface Song {
   skippedTracks?: string[]
   /** mixagem do player desta música: volume geral (0–1) e por faixa (multiplicador 0–2, índice da faixa) */
   mix?: { master: number; tracks: Record<number, number> }
+  /** faixas com instrumento e afinação (lido do arquivo; filtros da biblioteca) */
+  tracks?: import('../library/songMeta').TrackMeta[]
   /** vídeos e sincronia do Songsterr, salvos na primeira vez (funciona sem buscar de novo) */
   sync?: import('../library/songsterrSync').SongsterrSync
   notes?: string
