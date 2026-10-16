@@ -173,6 +173,15 @@ fn save_backup(app: AppHandle, name: String, contents: String) -> Result<String,
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Lê uma música guardada na pasta "musicas" do app (recuperação quando o arquivo some do banco do navegador).
+#[tauri::command]
+fn read_saved_song(app: AppHandle, name: String) -> Result<Vec<u8>, String> {
+    let file = PathBuf::from(&name);
+    let name = file.file_name().ok_or("nome inválido")?;
+    let path = app.path().app_data_dir().map_err(|e| e.to_string())?.join("musicas").join(name);
+    std::fs::read(&path).map_err(|e| e.to_string())
+}
+
 /// Porta local em que o app é servido. Em http://localhost (e não tauri://) o player do YouTube
 /// aceita ser embutido: ele exige um "referer" de página web.
 const PORT: u16 = 47321;
@@ -184,7 +193,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .manage(Downloads::default())
         .manage(Pending::default())
-        .invoke_handler(tauri::generate_handler![open_songsterr, read_download, save_backup])
+        .invoke_handler(tauri::generate_handler![open_songsterr, read_download, save_backup, read_saved_song])
         .setup(|app| {
             // log em arquivo também no app final (~/Library/Logs/br.fretlab.desktop/), para depurar downloads
             app.handle().plugin(

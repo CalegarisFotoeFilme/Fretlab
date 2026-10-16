@@ -34,6 +34,12 @@ export async function saveBackupDesktop(name: string, contents: string) {
   return invoke<string>('save_backup', { name, contents })
 }
 
+/** Lê uma música guardada na pasta "musicas" do app para Mac (pelo nome do arquivo). */
+export async function readSavedSong(name: string) {
+  const { invoke } = await import('@tauri-apps/api/core')
+  return new Uint8Array(await invoke<number[]>('read_saved_song', { name }))
+}
+
 /** Lê os bytes de um arquivo baixado pela janela do Songsterr. */
 export async function readDownload(path: string) {
   const { invoke } = await import('@tauri-apps/api/core')

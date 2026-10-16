@@ -6,6 +6,7 @@ import { Button, PageHeader, Segmented } from '../components/ui'
 import { Kbd } from '../components/useHotkeys'
 import { Playlists } from '../library/Playlists'
 import { useSettings } from '../progress/settings'
+import { updateSong } from '../progress/songs'
 import { openSongsterr, parseSongsterrUrl } from '../library/alphatab'
 import { isDesktop } from '../library/desktop'
 import { GP_ACCEPT, songFromFile } from '../library/importSong'
@@ -164,16 +165,16 @@ function SongCard({ song }: { song: Song }) {
             <ExternalLink className="size-4" aria-hidden /> Songsterr ao lado
           </Button>
         )}
-        {!song.file && (
+        {(
           <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-pearl-dim hover:text-pearl hover:bg-wood-800/60 font-semibold cursor-pointer focus-within:outline-2 focus-within:outline-enclosure">
-            <Plus className="size-4" aria-hidden /> Anexar Guitar Pro
+            <Plus className="size-4" aria-hidden /> {song.file ? 'Trocar arquivo' : 'Anexar Guitar Pro'}
             <input
               type="file"
               accept={GP_ACCEPT}
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) void songFromFile(f).then(({ file, fileName, origin, skippedTracks }) => db.songs.update(song.id!, { file, fileName, origin, skippedTracks }))
+                if (f) void songFromFile(f).then(({ file, fileName, origin, skippedTracks }) => updateSong(song.id!, { file, fileName, origin, skippedTracks }))
               }}
             />
           </label>
@@ -187,7 +188,7 @@ function EditSong({ song, onDone }: { song: Song; onDone: () => void }) {
   const [title, setTitle] = useState(song.title)
   const [artist, setArtist] = useState(song.artist)
   const save = async () => {
-    await db.songs.update(song.id!, { title: title.trim() || song.title, artist: artist.trim() })
+    await updateSong(song.id!, { title: title.trim() || song.title, artist: artist.trim() })
     onDone()
   }
   return (

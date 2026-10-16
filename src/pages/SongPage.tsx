@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Gauge, Hourglass, Paus
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { playlistSongUrl } from '../library/Playlists'
+import { readSongBytes, updateSong } from '../progress/songs'
 import { useAudioInput } from '../audio/useInput'
 import { SongTheory } from '../components/SongTheory'
 import { Kbd, useHotkeys } from '../components/useHotkeys'
@@ -62,9 +63,15 @@ function SongView() {
   // áudio original do YouTube sincronizado com a tab (app para Mac)
   const videoHost = useRef<HTMLDivElement>(null)
   const original = useOriginalAudio(apiRef, videoHost, song?.songsterrUrl, song?.sync, (sync) => {
-    if (song?.id) void db.songs.update(song.id, { sync })
+    if (song?.id) void updateSong(song.id, { sync })
   })
   const videoOn = original.state.status === 'on' || original.state.status === 'loading'
+  // sintetizador ou gravação: a escolha vale para as próximas músicas
+  const setSettings = useSettings((s) => s.set)
+  const chooseSource = (v: 'midi' | 'video') => {
+    setSettings({ playerSource: v })
+    void (v === 'video' ? original.enable() : original.disable())
+  }
   // vídeo: grande, pequeno ou oculto (só o som; lembrado neste navegador)
   const [videoSize, setVideoSize] = useState<'big' | 'small' | 'hidden'>(() => {
     try {
@@ -118,6 +125,15 @@ function SongView() {
     songRef.current = song
   })
 
+  // última escolha foi a gravação do YouTube: liga sozinho quando o player fica pronto
+  const autoSource = useRef(false)
+  useEffect(() => {
+    if (!ready || autoSource.current) return
+    autoSource.current = true
+    if (useSettings.getState().playerSource === 'video' && songRef.current?.songsterrUrl && syncAvailable()) void original.enable()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready])
+
   useEffect(() => {
     const file = songRef.current?.file
     if (!fileKey || !file || !host.current) return
@@ -162,7 +178,7 @@ function SongView() {
           // título e artista reais do arquivo, se o nome atual veio do nome do arquivo
           const cur = songRef.current
           if (cur && cur.title === cur.fileName?.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ')) {
-            void db.songs.update(cur.id!, { title: s.title || cur.title, artist: s.artist || cur.artist })
+            void updateSong(cur.id!, { title: s.title || cur.title, artist: s.artist || cur.artist })
           }
         })
         inst.playerReady.on(() => {
@@ -215,7 +231,7 @@ function SongView() {
           }
         })
         if (hasCustomSf || !paths.soundFont) void applySoundFont(inst).catch(() => setError('Não foi possível carregar os timbres do player.'))
-        const bytes = new Uint8Array(await file.arrayBuffer())
+        const bytes = await readSongBytes(songRef.current!)
         const name = songRef.current?.fileName ?? ''
         if (/\.midi?$/i.test(name)) {
           // MIDI do Songsterr: convertido aqui, direto para o modelo do alphaTab
@@ -223,7 +239,7 @@ function SongView() {
           if (disposed) return
           inst.renderScore(midiToScore(at, bytes, name).score)
         } else inst.load(bytes)
-        void db.songs.update(Number(id), { lastOpenedAt: Date.now() })
+        void updateSong(Number(id), { lastOpenedAt: Date.now() })
       } catch (e) {
         setError((e as Error).message)
       }
@@ -269,19 +285,16 @@ function SongView() {
   }
   // volumes: geral e por faixa, salvos na música
   const playerVolume = useSettings((s) => s.playerVolume)
-  const setPlayerVolume = useSettings((s) => s.set)
+  const setPlayerVolume = setSettings
   const levels = { master: playerVolume, tracks: song?.mix?.tracks ?? {} }
   // grava em cima do valor atual do banco (mexer rápido em dois sliders não perde nada)
   const saveMix = (change: (m: { master: number; tracks: Record<number, number> }) => void) => {
     if (!song?.id) return
-    void db.songs
-      .where('id')
-      .equals(song.id)
-      .modify((s) => {
-        const m = s.mix ?? { master: 1, tracks: {} }
-        change(m)
-        s.mix = m
-      })
+    void updateSong(song.id, (s) => {
+      const m = s.mix ?? { master: 1, tracks: {} }
+      change(m)
+      s.mix = m
+    })
   }
   const changeMaster = (v: number) => {
     const api = apiRef.current
@@ -353,7 +366,7 @@ function SongView() {
     v: () => videoOn && changeVideoSize(videoSize === 'hidden' ? 'small' : 'hidden'),
     o: () => {
       if (!syncAvailable() || !song?.songsterrUrl) return
-      void (videoOn ? original.disable() : original.enable())
+      chooseSource(videoOn ? 'midi' : 'video')
     },
     '[': () => goToBar(Math.max(0, bar - 1)),
     ']': () => goToBar(Math.min((score?.masterBars.length ?? 1) - 1, bar + 1)),
@@ -445,7 +458,7 @@ function SongView() {
                       <Segmented<string>
                         label="Áudio"
                         value={videoOn ? 'video' : 'midi'}
-                        onChange={(v) => void (v === 'video' ? original.enable() : original.disable())}
+                        onChange={(v) => chooseSource(v as 'midi' | 'video')}
                         options={[
                           { value: 'midi', label: 'Sintetizador (MIDI)' },
                           { value: 'video', label: 'Gravação (YouTube)' },
