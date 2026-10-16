@@ -249,12 +249,11 @@ Ver `CLAUDE.md`. Resumo:
 - nunca versionar músicas do usuário;
 - checagens antes de commit: `npx tsc -b && npx eslint . && npx vitest run && npx vite build`.
 
-## Windows (avaliado em 2026-10-15)
+## Windows (preparado em 2026-10-16, versão 1.2.0)
 
-O app é Tauri 2 + React, então o mesmo código compila para Windows (WebView2). O que precisa de atenção:
-- **Compilar no Windows** (ou em CI `windows-latest` com GitHub Actions): `npm run desktop:build` gera `.msi`/`.exe` (NSIS). Cross-compilar do Mac não é prático.
-- `src-tauri/src/lib.rs`: o tratamento de downloads foi feito para o WebKit do macOS (que não informa o caminho do arquivo, por isso o mapa `Pending`). No WebView2 o evento de download informa o caminho; revisar e testar. O user agent "Safari" do login Google talvez precise virar um UA de Edge/Chrome no Windows.
-- `save_backup` usa `open -R` (Finder): trocar por `explorer /select,` no Windows.
-- Scripts `desktop`/`desktop:build` do package.json usam `PATH=$HOME/.cargo/bin:...` (sintaxe de shell Unix): criar variantes para Windows.
-- Áudio: entrada pela pedaleira via WebView2 (Chromium) deve funcionar; a latência no Windows depende do driver (ASIO não é usado pelo navegador).
-- O cursor e a animação que piscavam no WebKit não são problema no WebView2.
+- **Instalador:** `.github/workflows/windows.yml` compila numa máquina Windows do GitHub (tag `v*` ou "Run workflow" em Actions) e publica o `.exe` (NSIS) como artifact "FretLab-Windows". No Windows local: `npm run desktop:build:windows`.
+- **Scripts:** `desktop`/`desktop:build` usam `scripts/tauri.mjs` (põe `~/.cargo/bin` no PATH em qualquer sistema).
+- **Rust:** user agent Safari só no Mac (`songsterr_ua`); no Windows fica o do WebView2. `save_backup` mostra o arquivo no Explorer (`explorer /select,`). O tratamento de downloads (mapa `Pending`) também funciona quando o WebView2 informa o caminho.
+- **Dados no Windows:** `%APPDATA%\\br.fretlab.desktop\\musicas` (downloads do Songsterr) e o banco do WebView2 em `%LOCALAPPDATA%\\br.fretlab.desktop`. Log em `%LOCALAPPDATA%\\br.fretlab.desktop\\logs`.
+- **Migração Mac → Windows:** exportar os dois backups (estudos e biblioteca) no Mac, importar no Windows; carregar de novo o SoundFont (`GeneralUser-GS.sf2`, não vai no backup) em Ajustes.
+- **A testar no Windows:** login Google na janela do Songsterr (o Google às vezes recusa WebView2), downloads e importação dos favoritos, entrada de áudio da pedaleira (latência depende do driver), sincronia do YouTube.

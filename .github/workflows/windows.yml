@@ -1,0 +1,29 @@
+name: App para Windows
+
+# Gera o instalador do FretLab para Windows (.exe, NSIS) numa máquina Windows do GitHub.
+# Roda ao publicar uma tag de versão (v1.2.0…) ou à mão em Actions → "App para Windows" → Run workflow.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run desktop:build:windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FretLab-Windows
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error

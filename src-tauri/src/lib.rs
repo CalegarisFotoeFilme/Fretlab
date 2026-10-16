@@ -32,6 +32,16 @@ struct DownloadDone {
 /// (reconhecido pelo user agent padrão do WKWebView, que não traz "Version/… Safari/…").
 const SAFARI_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15";
 
+/// User agent das janelas do Songsterr: no Mac, o do Safari (o WKWebView não se identifica e o
+/// login do Google recusa); no Windows, o padrão do WebView2 (Edge), que já é aceito.
+fn songsterr_ua<'a, R: tauri::Runtime, M: tauri::Manager<R>>(b: WebviewWindowBuilder<'a, R, M>) -> WebviewWindowBuilder<'a, R, M> {
+    if cfg!(target_os = "macos") {
+        b.user_agent(SAFARI_UA)
+    } else {
+        b
+    }
+}
+
 /// Rótulos únicos para as janelas pop-up (ex.: login com Google).
 static POPUPS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
@@ -126,15 +136,13 @@ fn open_songsterr(app: AppHandle, url: String) -> Result<(), String> {
 
     let handle = app.clone();
     let popup_app = app.clone();
-    WebviewWindowBuilder::new(&app, "songsterr", WebviewUrl::External(parsed))
+    songsterr_ua(WebviewWindowBuilder::new(&app, "songsterr", WebviewUrl::External(parsed)))
         .title("Songsterr · FretLab")
-        .user_agent(SAFARI_UA)
         // pop-ups (login com Google): janela do app ligada à que abriu, para o login voltar ao Songsterr
         .on_new_window(move |_url, features| {
             let n = POPUPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            let built = WebviewWindowBuilder::new(&popup_app, format!("songsterr-popup-{n}"), WebviewUrl::External("about:blank".parse().expect("about:blank")))
+            let built = songsterr_ua(WebviewWindowBuilder::new(&popup_app, format!("songsterr-popup-{n}"), WebviewUrl::External("about:blank".parse().expect("about:blank"))))
                 .window_features(features)
-                .user_agent(SAFARI_UA)
                 .title("Songsterr")
                 // o Songsterr baixa o Guitar Pro por uma janela nova: ela também precisa avisar o FretLab
                 .on_download(download_handler(popup_app.clone()))
@@ -182,7 +190,11 @@ fn save_backup(app: AppHandle, name: String, contents: String) -> Result<String,
     let name = file.file_name().ok_or("nome inválido")?;
     let path = app.path().download_dir().map_err(|e| e.to_string())?.join(name);
     std::fs::write(&path, contents).map_err(|e| e.to_string())?;
+    // mostra o arquivo na pasta: Finder no Mac, Explorer no Windows
+    #[cfg(target_os = "macos")]
     let _ = std::process::Command::new("open").arg("-R").arg(&path).spawn();
+    #[cfg(target_os = "windows")]
+    let _ = std::process::Command::new("explorer").arg(format!("/select,{}", path.display())).spawn();
     Ok(path.to_string_lossy().into_owned())
 }
 

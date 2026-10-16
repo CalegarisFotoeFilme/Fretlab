@@ -1,7 +1,7 @@
 {
   "name": "fretlab",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -14,8 +14,9 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "desktop": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri dev",
-    "desktop:build": "PATH=\"$HOME/.cargo/bin:$PATH\" tauri build"
+    "desktop": "node scripts/tauri.mjs dev",
+    "desktop:build": "node scripts/tauri.mjs build",
+    "desktop:build:windows": "node scripts/tauri.mjs build --bundles nsis"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",
