@@ -23,6 +23,10 @@
 4. App para Mac: `npm run desktop` (desenvolvimento) ou `npm run desktop:build` (gera `src-tauri/target/release/bundle/macos/FretLab.app`). Depois de instalar uma build, feche e abra o app.
 5. Economize recursos: o usuário prefere testar ele mesmo no app. Faça as checagens automáticas, recompile, faça commit e **peça para ele testar**, com um roteiro curto.
 
+## Versão 1.1.0 (2026-10-16): baixo de 6 cordas
+
+- Novo instrumento `bass6` (B E A D G C, 24 casas; também meio tom abaixo). Trilha, Treino, desafios e testes valem para baixo 4, 5 e 6 e guitarra (`generate.test.ts`, `training.test.ts`, `challenges.test.ts`). Família "baixo" = tudo que não é `guitar6`.
+
 ## Versão 1.0.0 (2026-10-15)
 
 Primeira versão "fechada" (package.json, `src-tauri/tauri.conf.json` e `Cargo.toml` em 1.0.0, tag `v1.0.0`). Resumo do que existe:
@@ -94,7 +98,7 @@ Primeira versão "fechada" (package.json, `src-tauri/tauri.conf.json` e `Cargo.t
 
 ## Próximos passos (prioridade)
 
-> **Retome por aqui.** Última sessão: 2026-10-15, versão **1.0.0** (tag `v1.0.0`). Tudo commitado; app para Mac recompilado; checagens passando (78 testes). Não há pendências abertas: as próximas ideias estão em "E" abaixo.
+> **Retome por aqui.** Última sessão: 2026-10-15, versão **1.1.0** (tag `v1.1.0`; baixo de 6 cordas). Tudo commitado; app para Mac recompilado; checagens passando (78 testes). Não há pendências abertas: as próximas ideias estão em "E" abaixo.
 
 ### A. Pedidos do usuário: todos feitos
 

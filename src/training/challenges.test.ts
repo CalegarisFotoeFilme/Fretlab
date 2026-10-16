@@ -4,7 +4,7 @@ import { SCALES, mod12, pcName } from '../theory/notes'
 import { makeChallenge, scaleFromString, inGroups } from './challenges'
 import { drillsFor } from './drills'
 
-const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
+const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('bass6'), makeInstrument('guitar6')]
 const name = (pc: number) => pcName(pc as never)
 
 describe('desafios do Treino', () => {

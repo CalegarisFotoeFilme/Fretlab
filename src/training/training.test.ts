@@ -3,7 +3,7 @@ import { makeInstrument, midiAt } from '../theory/instrument'
 import { SCALES, mod12 } from '../theory/notes'
 import { DRILLS, dayNumber, drillOfDay, drillSequence, drillsFor, dueReviews } from './drills'
 
-const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
+const instruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('bass6'), makeInstrument('guitar6')]
 
 describe('Treino do Dia', () => {
   it('todo exercício gera uma sequência tocável em todo instrumento, tom e posição', () => {
@@ -38,7 +38,7 @@ describe('Treino do Dia', () => {
   })
 
   it('escalas sobem e depois descem', () => {
-    const inst = instruments[2]
+    const inst = instruments.find((i) => i.kind === 'guitar6')!
     const seq = drillSequence(inst, DRILLS.find((d) => d.id === 'pentatonica')!, 9).map((p) => midiAt(inst, p))
     const top = seq.indexOf(Math.max(...seq))
     for (let i = 1; i <= top; i++) expect(seq[i]).toBeGreaterThan(seq[i - 1])
@@ -95,7 +95,7 @@ describe('Treino do Dia', () => {
 describe('sentido do exercício', () => {
   it('só sobe termina na nota mais aguda; só desce começa nela', async () => {
     const { withDirection } = await import('./drills')
-    const inst = instruments[2]
+    const inst = instruments.find((i) => i.kind === 'guitar6')!
     const drill = DRILLS.find((d) => d.id === 'pentatonica')!
     const seq = drillSequence(inst, drill, 9, 0)
     const top = Math.max(...seq.map((p) => midiAt(inst, p)))

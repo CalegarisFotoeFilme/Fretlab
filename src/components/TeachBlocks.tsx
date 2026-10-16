@@ -87,7 +87,7 @@ function Block({ block }: { block: TeachBlock }) {
           )}
           {inst.kind !== 'guitar6' && (
             <p className="px-3 pt-3 pb-1 text-sm text-pearl-dim">
-              O baixo é afinado igual às 4 cordas mais graves da guitarra, uma oitava abaixo{inst.kind === 'bass5' ? ', com um Si extra embaixo' : ''}.
+              O baixo é afinado igual às 4 cordas mais graves da guitarra, uma oitava abaixo{inst.kind === 'bass5' ? ', com um Si extra embaixo' : inst.kind === 'bass6' ? ', com um Si extra embaixo e um Dó extra em cima (a 4ª acima do Sol, como todas as outras)' : ''}.
             </p>
           )}
         </div>

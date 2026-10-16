@@ -1,6 +1,6 @@
 import { mod12, parseMidi, type Midi, type PitchClass } from './notes'
 
-export type InstrumentKind = 'bass4' | 'bass5' | 'guitar6'
+export type InstrumentKind = 'bass4' | 'bass5' | 'bass6' | 'guitar6'
 
 export interface Tuning {
   id: string
@@ -18,6 +18,10 @@ export const TUNINGS: Record<InstrumentKind, Tuning[]> = {
   bass5: [
     { id: 'std', name: 'Padrão (B E A D G)', strings: ['B0', 'E1', 'A1', 'D2', 'G2'] },
   ],
+  bass6: [
+    { id: 'std', name: 'Padrão (B E A D G C)', strings: ['B0', 'E1', 'A1', 'D2', 'G2', 'C3'] },
+    { id: 'halfDown', name: 'Meio tom abaixo', strings: ['Bb0', 'Eb1', 'Ab1', 'Db2', 'Gb2', 'B2'] },
+  ],
   guitar6: [
     { id: 'std', name: 'Padrão (E A D G B E)', strings: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
     { id: 'dropD', name: 'Drop D', strings: ['D2', 'A2', 'D3', 'G3', 'B3', 'E4'] },
@@ -28,6 +32,7 @@ export const TUNINGS: Record<InstrumentKind, Tuning[]> = {
 export const INSTRUMENT_LABEL: Record<InstrumentKind, string> = {
   bass4: 'Baixo 4 cordas',
   bass5: 'Baixo 5 cordas',
+  bass6: 'Baixo 6 cordas',
   guitar6: 'Guitarra 6 cordas',
 }
 
@@ -43,7 +48,7 @@ export function makeInstrument(kind: InstrumentKind, tuningId = 'std', frets?: n
   return {
     kind,
     tuning,
-    frets: frets ?? (kind === 'guitar6' ? 22 : 20),
+    frets: frets ?? (kind === 'guitar6' ? 22 : kind === 'bass6' ? 24 : 20),
     openMidi: tuning.strings.map(parseMidi),
   }
 }

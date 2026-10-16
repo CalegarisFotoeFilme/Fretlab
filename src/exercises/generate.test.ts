@@ -6,7 +6,7 @@ import { midiAt } from '../theory/instrument'
 import { pcName } from '../theory/notes'
 import { onsetBeats, totalBeats } from './rhythmScore'
 
-const allInstruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('guitar6')]
+const allInstruments = [makeInstrument('bass4'), makeInstrument('bass5'), makeInstrument('bass6'), makeInstrument('guitar6')]
 const instruments = allInstruments
 
 describe('geradores', () => {
@@ -26,7 +26,7 @@ describe('geradores', () => {
 
   it('name-note inclui a resposta certa entre opções únicas', () => {
     for (let i = 0; i < 200; i++) {
-      const r = nameNoteRound(instruments[2], 'all', 'all', { from: 0, to: 12 }, 4)
+      const r = nameNoteRound(instruments.find((i) => i.kind === 'guitar6')!, 'all', 'all', { from: 0, to: 12 }, 4)
       expect(r.options).toContain(r.pc)
       expect(new Set(r.options).size).toBe(4)
     }
@@ -52,7 +52,7 @@ describe('ritmo II', () => {
 
 describe('intervalos', () => {
   it('formas clássicas no braço', () => {
-    const gtr = instruments[2]
+    const gtr = instruments.find((i) => i.kind === 'guitar6')!
     const root = { string: 0, fret: 3 } // G na 6ª corda
     expect(intervalTargets(gtr, root, 7)).toContainEqual({ string: 1, fret: 5 }) // 5ª: corda de cima, 2 casas à frente
     expect(intervalTargets(gtr, root, 12)).toContainEqual({ string: 2, fret: 5 }) // oitava: 2 cordas acima, 2 casas
